@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/ui/theme";
+import { ApiError } from "@/lib/api";
 
 /** A tab's page: a big title, pull to refresh, room under the tabs. */
 export function Page({ title, subtitle, right, refreshing, onRefresh, children }: { title: string; subtitle?: string; right?: ReactNode; refreshing?: boolean; onRefresh?: () => void; children: ReactNode }) {
@@ -67,6 +68,7 @@ export function LoadError({ error, onRetry }: { error: unknown; onRetry?: () => 
     return (
         <View style={[styles.card, { backgroundColor: colors.muted, alignItems: "center", marginTop: 24, paddingVertical: 32 }]}>
             <Text style={{ color: colors.danger, fontSize: 14, textAlign: "center", lineHeight: 20 }}>{error instanceof Error ? error.message : "Couldn't load this."}</Text>
+            {error instanceof ApiError && error.status >= 400 ? <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 4 }}>Error {error.status}</Text> : null}
             {onRetry ? <View style={{ marginTop: 12 }}><Button small kind="secondary" title="Try again" onPress={onRetry} /></View> : null}
         </View>
     );
