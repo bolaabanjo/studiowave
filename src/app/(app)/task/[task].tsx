@@ -6,7 +6,7 @@ import { useWorkspace } from "@/lib/workspace";
 import type { StudioTask } from "@/lib/tasks";
 import { AlertsTask, BusinessTask, EventTask, GoLiveTask, KnowledgeTask, LaterTask, NewBusinessTask, PaymentsTask, PlansTask, WebsiteTask, WhatsAppTask } from "@/components/tasks";
 import { ProductsTask } from "@/components/products";
-import { KeyboardSafe, SheetHeader, T, useKeyboard } from "@/ui/kit";
+import { KeyboardSafe, SHEET_TOP, SheetHeader, T, useKeyboard } from "@/ui/kit";
 import { useColors } from "@/ui/theme";
 
 const TITLES: Record<StudioTask, string> = {
@@ -63,8 +63,9 @@ export default function Task() {
 
     return (
         <KeyboardSafe style={{ backgroundColor: colors.background }}>
-            <View style={{ paddingHorizontal: 20, paddingTop: 12 }}><SheetHeader title={title} onClose={() => router.back()} /></View>
-            <ScrollView contentContainerStyle={{ flexGrow: FILLS.has(task) ? 1 : undefined, paddingHorizontal: 20, paddingTop: 4, paddingBottom: keyboard.shown ? 12 : insets.bottom + 20 }} keyboardShouldPersistTaps="handled">
+            {/* The title scrolls with the sheet's content, so nothing can sit over it. */}
+            <ScrollView contentContainerStyle={{ flexGrow: FILLS.has(task) ? 1 : undefined, paddingHorizontal: 20, paddingTop: SHEET_TOP, paddingBottom: keyboard.shown ? 12 : insets.bottom + 20 }} keyboardShouldPersistTaps="handled">
+                <View style={{ marginBottom: 4 }}><SheetHeader title={title} onClose={() => router.back()} /></View>
                 {body}
             </ScrollView>
         </KeyboardSafe>
