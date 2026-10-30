@@ -23,6 +23,11 @@ interface SessionValue {
     signInWithPassword(email: string, password: string): Promise<void>;
     sendCode(email: string): Promise<void>;
     signInWithCode(email: string, code: string): Promise<void>;
+    /** A new account, unverified until the emailed 6-digit code (as the web's sign-up). */
+    signUp(email: string, password: string): Promise<void>;
+    sendSignUpCode(email: string): Promise<void>;
+    /** The sign-up code: verifies the email and signs the new owner in. */
+    verifySignUp(email: string, code: string): Promise<void>;
     /** Google or GitHub, in the phone's browser; false when the owner closed it. */
     signInWithProvider(provider: "google" | "github"): Promise<boolean>;
     /** Sign in with Apple, natively (iOS); false when the owner cancelled. */
@@ -31,6 +36,13 @@ interface SessionValue {
 }
 
 const SessionContext = createContext<SessionValue | null>(null);
+
+/** A failed auth call, with Better Auth's code (e.g. EMAIL_NOT_VERIFIED) for screens that act on it. */
+export class AuthError extends Error {
+    constructor(message: string, readonly code?: string) {
+        super(message);
+    }
+}
 
 async function authCall(path: string, body: unknown): Promise<{ token: string | null }> {
     const response = await fetch(`${API_URL}/api/auth/${path}`, {
@@ -41,7 +53,7 @@ async function authCall(path: string, body: unknown): Promise<{ token: string | 
     }).catch(() => null);
     if (!response) throw new Error("Couldn't reach Studio. Check your connection and try again.");
     const json = (await response.json().catch(() => null)) as { token?: string; message?: string; code?: string } | null;
-    if (!response.ok) throw new Error(signInError(json?.code, json?.message));
+    if (!response.ok) throw new AuthError(signInError(json?.code, json?.message), json?.code);
     // The bearer plugin sends the session token in this header; sign-in also returns it in the body.
     return { token: response.headers.get("set-auth-token") ?? json?.token ?? null };
 }
@@ -50,7 +62,11 @@ function signInError(code: string | undefined, message: string | undefined): str
     if (code === "INVALID_EMAIL_OR_PASSWORD") return "That email and password don't match.";
     if (code === "INVALID_OTP" || code === "OTP_EXPIRED") return "That code didn't work. Check it, or send a new one.";
     if (code === "TOO_MANY_ATTEMPTS") return "Too many tries. Send a new code.";
-    if (code === "EMAIL_NOT_VERIFIED") return "Confirm your email first: sign in with a code instead.";
+    if (code === "USER_ALREADY_EXISTS" || code === "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL") return "That email already has an account. Sign in instead.";
+    if (code === "PASSWORD_TOO_SHORT") return "Use at least 8 characters for your password.";
+    if (code === "PASSWORD_TOO_LONG") return "That password is too long.";
+    if (code === "INVALID_EMAIL") return "Enter a valid email address.";
+    if (code === "EMAIL_NOT_VERIFIED") return "Confirm your email first.";
     return message || "Couldn't sign in. Try again.";
 }
 
@@ -145,6 +161,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         signInWithPassword: async (email, password) => keep((await authCall("sign-in/email", { email, password })).token),
         sendCode: async (email) => void (await authCall("email-otp/send-verification-otp", { email, type: "sign-in" })),
         signInWithCode: async (email, code) => keep((await authCall("sign-in/email-otp", { email, otp: code })).token),
+        // Better Auth's own sign-up and email OTP (cencori lib/auth/better-auth.ts): the account is
+        // created unverified, the code is the web's, and verifying it signs in (autoSignInAfterVerification).
+        signUp: async (email, password) => {
+            await authCall("sign-up/email", { email, password, name: email.split("@")[0] });
+            await authCall("email-otp/send-verification-otp", { email, type: "email-verification" });
+        },
+        sendSignUpCode: async (email) => void (await authCall("email-otp/send-verification-otp", { email, type: "email-verification" })),
+        verifySignUp: async (email, code) => keep((await authCall("email-otp/verify-email", { email, otp: code })).token),
         signInWithProvider: async (provider) => {
             const next = await providerSignIn(provider);
             if (!next) return false;
