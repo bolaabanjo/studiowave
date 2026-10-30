@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import * as AppleAuthentication from "expo-apple-authentication";
 import * as SecureStore from "expo-secure-store";
 import { fetch } from "expo/fetch";
 import * as Crypto from "expo-crypto";
@@ -24,6 +25,8 @@ interface SessionValue {
     signInWithCode(email: string, code: string): Promise<void>;
     /** Google or GitHub, in the phone's browser; false when the owner closed it. */
     signInWithProvider(provider: "google" | "github"): Promise<boolean>;
+    /** Sign in with Apple, natively (iOS); false when the owner cancelled. */
+    signInWithApple(): Promise<boolean>;
     signOut(): Promise<void>;
 }
 
@@ -78,6 +81,36 @@ async function providerSignIn(provider: "google" | "github"): Promise<string | n
     return json.token;
 }
 
+/**
+ * Sign in with Apple: iOS's own sheet, then Apple's ID token to Better Auth
+ * (cencori lib/auth/better-auth.ts), which checks it against Apple's keys. The
+ * nonce goes to Apple hashed and to Studio raw, so a token can't be replayed.
+ * Apple gives the name only the first time, so it's passed along then.
+ */
+async function appleSignIn(): Promise<string | null> {
+    const nonce = Array.from(Crypto.getRandomBytes(32), (byte) => byte.toString(16).padStart(2, "0")).join("");
+    const hashed = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, nonce, { encoding: Crypto.CryptoEncoding.HEX });
+    let credential: AppleAuthentication.AppleAuthenticationCredential;
+    try {
+        credential = await AppleAuthentication.signInAsync({
+            requestedScopes: [AppleAuthentication.AppleAuthenticationScope.FULL_NAME, AppleAuthentication.AppleAuthenticationScope.EMAIL],
+            nonce: hashed,
+        });
+    } catch (cause) {
+        if ((cause as { code?: string }).code === "ERR_REQUEST_CANCELED") return null;
+        throw new Error("Couldn't sign in with Apple. Try again.");
+    }
+    if (!credential.identityToken) throw new Error("Couldn't sign in with Apple. Try again.");
+    const name = credential.fullName?.givenName || credential.fullName?.familyName
+        ? { firstName: credential.fullName.givenName ?? undefined, lastName: credential.fullName.familyName ?? undefined }
+        : undefined;
+    const { token } = await authCall("sign-in/social", {
+        provider: "apple",
+        idToken: { token: credential.identityToken, nonce, ...(name || credential.email ? { user: { ...(name ? { name } : {}), ...(credential.email ? { email: credential.email } : {}) } } : {}) },
+    });
+    return token;
+}
+
 export function SessionProvider({ children }: { children: ReactNode }) {
     const [ready, setReady] = useState(false);
     const [token, setToken] = useState<string | null>(null);
@@ -114,6 +147,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         signInWithCode: async (email, code) => keep((await authCall("sign-in/email-otp", { email, otp: code })).token),
         signInWithProvider: async (provider) => {
             const next = await providerSignIn(provider);
+            if (!next) return false;
+            await keep(next);
+            return true;
+        },
+        signInWithApple: async () => {
+            const next = await appleSignIn();
             if (!next) return false;
             await keep(next);
             return true;

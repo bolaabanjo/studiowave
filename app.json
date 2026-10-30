@@ -9,7 +9,8 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.cencori.studio",
-      "backgroundColor": "#000000"
+      "backgroundColor": "#000000",
+      "usesAppleSignIn": true
     },
     "android": {
       "adaptiveIcon": {
@@ -28,6 +29,7 @@
       "expo-router",
       "expo-secure-store",
       "expo-web-browser",
+      "expo-apple-authentication",
       "expo-notifications",
       "expo-font",
       "expo-audio",
