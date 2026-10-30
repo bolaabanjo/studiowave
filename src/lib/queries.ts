@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useApi } from "@/lib/api";
 import { useWorkspace } from "@/lib/workspace";
-import type { ConversationPayload, InboxConversation, Money, MoneyPeriod, Sales, StudioOverview } from "@/lib/types";
+import type { ConversationPayload, InboxConversation, MoneyPeriod, MoneyWithPayments, Sales, StudioAssistantRow, StudioEventSummary, StudioGuest, StudioOverview } from "@/lib/types";
 
 // Studio's data, through the same routes and refresh rhythm as the web app.
 
@@ -9,12 +9,13 @@ function useProjectId(): string {
     return useWorkspace().workspace.project.id;
 }
 
-export function useOverview() {
+/** The business at a glance; with an assistant's id, that assistant's (the AI tab's detail page). */
+export function useOverview(agentId?: string) {
     const api = useApi();
     const projectId = useProjectId();
     return useQuery({
-        queryKey: ["overview", projectId],
-        queryFn: () => api<StudioOverview>(`/api/studio/overview?project_id=${projectId}`, { fallback: "Couldn't load your business." }),
+        queryKey: ["overview", projectId, agentId ?? null],
+        queryFn: () => api<StudioOverview>(`/api/studio/overview?project_id=${projectId}${agentId ? `&agent_id=${agentId}` : ""}`, { fallback: "Couldn't load your business." }),
         staleTime: 30_000,
     });
 }
@@ -86,7 +87,7 @@ export function useMoney(period: MoneyPeriod) {
     const projectId = useProjectId();
     return useQuery({
         queryKey: ["money", projectId, period],
-        queryFn: () => api<Money>(`/api/studio/money?project_id=${projectId}&period=${period}`, { fallback: "Couldn't load your money." }),
+        queryFn: () => api<MoneyWithPayments>(`/api/studio/money?project_id=${projectId}&period=${period}`, { fallback: "Couldn't load your money." }),
     });
 }
 
@@ -104,4 +105,74 @@ export function useTransferAction() {
             void queryClient.invalidateQueries({ queryKey: ["sales", projectId] });
         },
     });
+}
+
+/** Mark a chat read or unread; shown straight away, confirmed by the next refresh. */
+export function useMarkRead() {
+    const api = useApi();
+    const projectId = useProjectId();
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, read }: { id: string; read: boolean }) =>
+            api(`/api/studio/inbox/${id}`, { method: "POST", body: { project_id: projectId, action: read ? "mark_read" : "mark_unread" } }),
+        onMutate: ({ id, read }) => {
+            queryClient.setQueriesData<{ conversations: InboxConversation[] }>({ queryKey: ["inbox", projectId] }, (data) =>
+                data && { conversations: data.conversations.map((conversation) => (conversation.id === id ? { ...conversation, unread: !read } : conversation)) });
+        },
+        onSettled: () => void queryClient.invalidateQueries({ queryKey: ["inbox", projectId] }),
+    });
+}
+
+/** Every assistant in the business, for the AI tab's list. */
+export function useAssistants() {
+    const api = useApi();
+    const projectId = useProjectId();
+    return useQuery({
+        queryKey: ["assistants", projectId],
+        queryFn: () => api<{ assistants: StudioAssistantRow[] }>(`/api/studio/assistants?project_id=${projectId}`, { fallback: "Couldn't load your assistants." }),
+    });
+}
+
+/** Pause an assistant, or switch it back on. */
+export function useSetAssistantActive() {
+    const api = useApi();
+    const projectId = useProjectId();
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ agentId, active }: { agentId: string; active: boolean }) =>
+            api("/api/studio/assistants", { method: "PATCH", body: { project_id: projectId, agent_id: agentId, active } }),
+        onSuccess: () => {
+            void queryClient.invalidateQueries({ queryKey: ["assistants", projectId] });
+            void queryClient.invalidateQueries({ queryKey: ["overview", projectId] });
+        },
+    });
+}
+
+export function useEvents() {
+    const api = useApi();
+    const projectId = useProjectId();
+    return useQuery({
+        queryKey: ["events", projectId],
+        queryFn: () => api<{ events: StudioEventSummary[] }>(`/api/studio/events?project_id=${projectId}`, { fallback: "Couldn't load your events." }),
+        refetchInterval: 30_000,
+    });
+}
+
+export function useEvent(eventId: string) {
+    const api = useApi();
+    const projectId = useProjectId();
+    return useQuery({
+        queryKey: ["event", projectId, eventId],
+        queryFn: () => api<{ event: StudioEventSummary; guests: StudioGuest[] }>(`/api/studio/events?project_id=${projectId}&event_id=${eventId}`, { fallback: "Couldn't load your events." }),
+        refetchInterval: 15_000,
+    });
+}
+
+/** Refresh everything a change to money touches: Money, Sales, Home, the inbox. */
+export function useRefreshMoney() {
+    const projectId = useProjectId();
+    const queryClient = useQueryClient();
+    return () => {
+        for (const key of ["money", "sales", "overview", "inbox"]) void queryClient.invalidateQueries({ queryKey: [key, projectId] });
+    };
 }

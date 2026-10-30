@@ -1,12 +1,15 @@
 import { Stack } from "expo-router";
 import { View } from "react-native";
+import * as WebBrowser from "expo-web-browser";
+import { SITE_URL } from "@/lib/config";
+import { CopilotProvider } from "@/lib/copilot";
 import { useWorkspaceQuery, WorkspaceProvider } from "@/lib/workspace";
 import { usePushRegistration } from "@/lib/push";
 import { useSession } from "@/lib/session";
-import { Body, Button, LoadError, Loading } from "@/ui/kit";
+import { Button, LoadError, Spinner, T } from "@/ui/kit";
 import { useColors } from "@/ui/theme";
 
-/** Signed in: load the business, then the tabs (and the screens that cover them). */
+/** Signed in: load the business, then the tabs, and the screens and sheets over them. */
 export default function AppLayout() {
     const colors = useColors();
     const { signOut } = useSession();
@@ -14,28 +17,38 @@ export default function AppLayout() {
     const workspace = query.data?.workspace ?? null;
     usePushRegistration(workspace?.project.id ?? null);
 
-    if (query.isPending) return <Centered><Loading /></Centered>;
-    if (query.isError) return <Centered><LoadError error={query.error} onRetry={() => void query.refetch()} /></Centered>;
+    if (query.isPending) return <Centered><Spinner /></Centered>;
+    if (query.isError) return <Centered><LoadError error={query.error} fallback="Couldn't load your business." onRetry={() => void query.refetch()} /></Centered>;
     if (!workspace) {
-        // Signed in, but no business yet: setup isn't in the app yet.
+        // Signed in, but no business yet: setup is next. It lives on the main site for now, as on the web.
         return (
             <Centered>
-                <Body weight="600" size={18}>Set up your business first</Body>
-                <View style={{ marginTop: 6, marginBottom: 20 }}>
-                    <Body muted>Open studio.cencori.com to set up your assistant. It shows up here when you&apos;re done.</Body>
+                <View style={{ alignItems: "center" }}>
+                    <T size={24} weight="600" center style={{ letterSpacing: -0.6 }}>Let&apos;s set up your business</T>
+                    <T size={14} leading={24} muted center style={{ marginTop: 8, maxWidth: 320 }}>Tell us what you do and your assistant will be ready to answer customers in a few minutes.</T>
+                    <Button title="Get started" onPress={() => void WebBrowser.openBrowserAsync(`${SITE_URL}/onboarding?for=business`).then(() => query.refetch())} style={{ marginTop: 24 }} />
+                    <Button kind="outline" title="Sign out" onPress={() => void signOut()} style={{ marginTop: 8 }} />
                 </View>
-                <Button kind="secondary" title="Try again" onPress={() => void query.refetch()} />
-                <View style={{ marginTop: 10 }}><Button kind="secondary" title="Sign out" onPress={() => void signOut()} /></View>
             </Centered>
         );
     }
+    const sheet = { presentation: "formSheet" as const, sheetGrabberVisible: false, sheetCornerRadius: 24, contentStyle: { backgroundColor: colors.background } };
     return (
         <WorkspaceProvider workspace={workspace} choose={choose}>
-            <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
-                <Stack.Screen name="(tabs)" />
-                <Stack.Screen name="conversation/[id]" />
-                <Stack.Screen name="profile" options={{ presentation: "modal" }} />
-            </Stack>
+            <CopilotProvider workspace={workspace}>
+                <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
+                    <Stack.Screen name="(tabs)" />
+                    <Stack.Screen name="conversation/[id]" />
+                    <Stack.Screen name="assistant/[id]" />
+                    <Stack.Screen name="event/[id]" />
+                    <Stack.Screen name="setup" options={{ presentation: "fullScreenModal" }} />
+                    <Stack.Screen name="profile" options={{ ...sheet, sheetAllowedDetents: [0.92] }} />
+                    <Stack.Screen name="notifications" options={{ ...sheet, sheetAllowedDetents: [0.6, 1] }} />
+                    <Stack.Screen name="qr" options={{ ...sheet, sheetAllowedDetents: "fitToContents" }} />
+                    <Stack.Screen name="copilot" options={{ ...sheet, sheetAllowedDetents: [0.88] }} />
+                    <Stack.Screen name="task/[task]" options={{ ...sheet, sheetAllowedDetents: [0.92] }} />
+                </Stack>
+            </CopilotProvider>
         </WorkspaceProvider>
     );
 }

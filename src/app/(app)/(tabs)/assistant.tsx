@@ -1,56 +1,71 @@
-import { View } from "react-native";
-import { useOverview } from "@/lib/queries";
+import { Pressable, View } from "react-native";
+import { router } from "expo-router";
+import { useAssistants, useOverview } from "@/lib/queries";
 import { useWorkspace } from "@/lib/workspace";
-import { Body, Card, Label, LoadError, Loading, Page } from "@/ui/kit";
+import { useTasks } from "@/lib/tasks";
+import { Icon } from "@/ui/icons";
+import { AgentOrb, IconCircle, LoadError, Page, PageTitle, Skeleton, T, Tag } from "@/ui/kit";
+import { assistantStatus } from "@/components/assistant-status";
+import { alpha, useColors } from "@/ui/theme";
 
-/**
- * The assistant: where it's answering and what it can do. Changing it
- * (Copilot) is still on studio.cencori.com.
- */
-export default function Assistant() {
+/** The AI tab: every assistant in the business, one or many, and a way to add another (cencori components/studio/views/AssistantView.tsx). */
+export default function Assistants() {
+    const colors = useColors();
     const { workspace } = useWorkspace();
-    const overview = useOverview();
-    const assistant = overview.data?.assistant;
+    const list = useAssistants();
+    const plan = useOverview().data?.plan ?? null;
+    const tasks = useTasks();
+    const assistants = list.data?.assistants ?? [];
+    const full = !!plan && assistants.length >= plan.agents;
+    const pill = ({ pressed }: { pressed: boolean }) => ({ flexDirection: "row" as const, alignItems: "center" as const, gap: 12, borderRadius: 999, backgroundColor: pressed ? colors.muted : colors.card, paddingVertical: 10, paddingLeft: 10, paddingRight: 20 });
+    const chevron = <Icon name="chevron-right:lucide" size={16} color={colors.mutedForeground} />;
 
     return (
-        <Page title="AI" subtitle={workspace.organization.name} refreshing={overview.isRefetching} onRefresh={() => void overview.refetch()}>
-            {overview.isPending ? <Loading /> : !overview.data ? <LoadError error={overview.error} onRetry={() => void overview.refetch()} /> : !assistant ? (
-                <Card style={{ marginTop: 16 }}><Body>No assistant yet. Set one up on studio.cencori.com.</Body></Card>
+        <Page refreshing={list.isRefetching} onRefresh={() => void list.refetch()}>
+            <PageTitle>Assistants</PageTitle>
+            {list.isLoading ? (
+                <View style={{ marginTop: 20, gap: 10 }}>{[0, 1].map((index) => <Skeleton key={index} height={76} radius={16} />)}</View>
+            ) : !list.data ? (
+                <LoadError error={list.error} fallback="Couldn't load your assistants." onRetry={() => void list.refetch()} />
             ) : (
-                <>
-                    <Card inverted style={{ marginTop: 16 }}>
-                        <Body inverted weight="700" size={20}>{assistant.name}</Body>
-                        <Body inverted size={14}>{assistant.published ? "Live, answering customers" : "Not live yet"}</Body>
-                    </Card>
-
-                    <Label>Where it answers</Label>
-                    <Card style={{ gap: 8 }}>
-                        <Line label="WhatsApp" value={assistant.whatsapp ? `${assistant.whatsapp.number ?? "Connected"}${assistant.whatsapp.replies_on ? "" : " · replies off"}` : "Not connected"} />
-                        <Line label="Your website" value={assistant.website_chat?.on ? assistant.website_chat.sites.join(", ") || "On" : "Off"} />
-                        <Line label="Your link" value={assistant.website_chat ? "On" : "Off"} />
-                    </Card>
-
-                    <Label>What it knows and does</Label>
-                    <Card style={{ gap: 8 }}>
-                        <Line label="Products" value={assistant.products ? `${assistant.products.count}` : "None"} />
-                        <Line label="Payments" value={assistant.payments?.provider ? "Taking payments" : "Off"} />
-                        <Line label="Knowledge" value={assistant.knowledge.length ? `${assistant.knowledge.length} source${assistant.knowledge.length === 1 ? "" : "s"}` : "None"} />
-                    </Card>
-
-                    <View style={{ marginTop: 20 }}>
-                        <Body muted size={13}>To change what your assistant says or does, use Copilot on studio.cencori.com. It&apos;s coming to the app next.</Body>
-                    </View>
-                </>
+                // A pill each: every assistant (live ones first), then adding one.
+                <View style={{ marginTop: 20, gap: 10 }}>
+                    {[...assistants].sort((a, b) => Number(b.published && b.active) - Number(a.published && a.active)).map((assistant) => {
+                        const status = assistantStatus(assistant, colors);
+                        return (
+                            <Pressable key={assistant.id} onPress={() => router.push(`/assistant/${assistant.id}`)} style={pill}>
+                                <AgentOrb seed={assistant.id} size={44} />
+                                <View style={{ flex: 1, minWidth: 0 }}>
+                                    <T weight="600" lines={1}>{assistant.name}</T>
+                                    {/* Live is the normal state, so it goes unsaid; Paused or Not live yet is worth seeing. */}
+                                    {status.label !== "Live" ? (
+                                        <View style={{ marginTop: 2, flexDirection: "row", alignItems: "center", gap: 6 }}>
+                                            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: status.dot }} />
+                                            <T size={13} muted>{status.label}</T>
+                                        </View>
+                                    ) : null}
+                                </View>
+                                {chevron}
+                            </Pressable>
+                        );
+                    })}
+                    {full ? (
+                        <Pressable onPress={() => tasks.open("plans")} style={pill}>
+                            <View style={{ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: alpha(colors.foreground, 0.1) }}><Icon name="plus:lucide" size={20} color={colors.foreground} /></View>
+                            <T weight="600" style={{ flex: 1 }}>Add assistant</T>
+                            <Tag tone="violet" label="Upgrade" />
+                            {chevron}
+                        </Pressable>
+                    ) : (
+                        // Setup, from the start, for a new assistant in this business.
+                        <Pressable onPress={() => router.push({ pathname: "/setup", params: { new: "1" } })} style={pill}>
+                            <IconCircle name="plus:lucide" tone="emerald" size={44} iconSize={20} />
+                            <T weight="600" lines={1} style={{ flex: 1 }}>{assistants.length ? "Add assistant" : `Set up ${workspace.organization.name}'s assistant`}</T>
+                            {chevron}
+                        </Pressable>
+                    )}
+                </View>
             )}
         </Page>
-    );
-}
-
-function Line({ label, value }: { label: string; value: string }) {
-    return (
-        <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
-            <Body size={14}>{label}</Body>
-            <View style={{ flex: 1, alignItems: "flex-end" }}><Body size={14} muted lines={1}>{value}</Body></View>
-        </View>
     );
 }

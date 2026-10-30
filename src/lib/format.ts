@@ -63,3 +63,22 @@ export function setupSteps(items: string[]): string[] {
         .filter(Boolean)
         .map((item) => item.charAt(0).toUpperCase() + item.slice(1));
 }
+
+/** Events happen in Lagos: their times are shown in Lagos time, whatever the phone's own zone. */
+export const EVENT_TIME_ZONE = "Africa/Lagos";
+
+/** "Sat 20 Dec · 8:00 pm", in Lagos time. */
+export function eventWhen(iso: string): string {
+    const date = new Date(iso);
+    const day = date.toLocaleDateString("en-GB", { timeZone: EVENT_TIME_ZONE, weekday: "short", day: "numeric", month: "short" });
+    const time = date.toLocaleTimeString("en-GB", { timeZone: EVENT_TIME_ZONE, hour: "numeric", minute: "2-digit", hour12: true });
+    return `${day} · ${time}`;
+}
+
+/** "OPay Digital Services Limited (OPay)" → "OPay", "Guaranty Trust Bank" → "GTBank": the names people use. */
+const SHORT_BANK: Record<string, string> = { "guaranty trust bank": "GTBank", "united bank for africa": "UBA", "first bank of nigeria": "First Bank", "first city monument bank": "FCMB", "moniepoint mfb": "Moniepoint", "stanbic ibtc bank": "Stanbic IBTC" };
+export function shortBankName(name: string): string {
+    const bracket = /\(([^)]+)\)\s*$/.exec(name)?.[1];
+    if (bracket) return bracket;
+    return SHORT_BANK[name.trim().toLowerCase()] ?? name.replace(/\s+(limited|ltd|plc)\.?$/i, "");
+}

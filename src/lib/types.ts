@@ -147,3 +147,44 @@ export interface Money {
     top_items: Array<{ name: string; quantity: number; amount: number }>;
     transfers_to_confirm: TransferToConfirm[];
 }
+
+export interface BankAccount {
+    bank: string;
+    account_number: string;
+    account_name: string;
+    /** Its bank's logo, when Money sends it. */
+    logo?: string | null;
+    /** Set on saved accounts. */
+    id?: string;
+}
+
+/** Money as the web reads it: the summary, plus how customers pay. */
+export type MoneyWithPayments = Money & {
+    payments: { provider: string; mode: string } | null;
+    bank_account: BankAccount | null;
+    bank_accounts?: BankAccount[];
+};
+
+export interface StudioAssistantRow {
+    id: string;
+    name: string;
+    published: boolean;
+    active: boolean;
+    whatsapp: { number: string | null } | null;
+    link: boolean;
+    website: boolean;
+    chats_this_week: number;
+}
+
+export interface StudioEventTier { id: string; name: string; price: number; capacity: number | null; sold: number }
+
+export interface StudioEventSummary {
+    event: { id: string; slug: string; name: string; description: string; venue: string; starts_at: string; ends_at: string | null; currency: string; status: "live" | "closed" | "cancelled"; banner_url: string | null; tiers: Array<{ id: string; name: string; price: number; capacity: number | null }> };
+    sold: number;
+    capacity: number | null;
+    earned: number;
+    checked_in: number;
+    by_tier: StudioEventTier[];
+}
+
+export interface StudioGuest { id: string; tier_id: string; code: string; buyer_name: string; buyer_phone: string | null; price: number; paid_at: string | null; checked_in_at: string | null }
