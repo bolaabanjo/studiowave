@@ -46,8 +46,8 @@ export function Caps({ children, style }: { children: ReactNode; style?: StylePr
     return <T size={12} weight="600" muted upper style={style}>{children}</T>;
 }
 
-/** Bottom room under a tab's content (the native tab bar insets the scroll view itself on iOS). */
-export const TAB_ROOM = 32;
+/** Bottom room for the tab pill (pb-[calc(6rem+safe-area)]). */
+export const TAB_ROOM = 96;
 
 /**
  * A tab's page: the header (title and switcher) stays put while the rest

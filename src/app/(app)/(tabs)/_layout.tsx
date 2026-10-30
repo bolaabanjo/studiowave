@@ -1,51 +1,78 @@
-import { Platform } from "react-native";
-import { NativeTabs } from "expo-router/native-tabs";
+import { Tabs, type BottomTabBarProps } from "expo-router/tabs";
+import { router } from "expo-router";
+import { Pressable, View } from "react-native";
+import { BlurView } from "expo-blur";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useInbox } from "@/lib/queries";
-import { fonts, palette, useColors } from "@/ui/theme";
+import { Icon, type IconName } from "@/ui/icons";
+import { T } from "@/ui/kit";
+import { alpha, palette, useColors } from "@/ui/theme";
 
-/** iOS 26.1 shows a "search" tab as its own circle beside the others: Copilot's place, as on the web. */
-const COPILOT_APART = Platform.OS === "ios" && Number.parseFloat(String(Platform.Version)) >= 26.1;
+const TABS: Array<{ name: string; label: string; icon: IconName }> = [
+    { name: "index", label: "Home", icon: "home" },
+    { name: "inbox", label: "Inbox", icon: "chat-round-line" },
+    { name: "sales", label: "Sales", icon: "bag-4" },
+    { name: "money", label: "Money", icon: "wallet" },
+    { name: "assistant", label: "AI", icon: "stars-minimalistic" },
+];
 
-/**
- * The tabs: the phone's own tab bar, with the web Studio's icons and words
- * (cencori components/studio/StudioShell.tsx). The icons are the web's Solar
- * icons drawn to PNG (assets/tabs), tinted by the system like its own.
- */
+/** The five tabs, as on the web (cencori components/studio/StudioShell.tsx): a floating pill with labels, and Copilot's button beside it. */
 export default function TabsLayout() {
-    const colors = useColors();
-    const unread = (useInbox().data?.conversations ?? []).filter((conversation) => conversation.unread).length;
     return (
-        <NativeTabs
-            iconColor={{ default: colors.mutedForeground, selected: colors.foreground }}
-            labelStyle={{ default: { fontFamily: fonts["500"], color: colors.mutedForeground }, selected: { fontFamily: fonts["500"], color: colors.foreground } }}
-            tintColor={colors.foreground}
-            badgeBackgroundColor={palette.emerald600}
-        >
-            <NativeTabs.Trigger name="index">
-                <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
-                <NativeTabs.Trigger.Icon src={require("../../../../assets/tabs/home.png")} renderingMode="template" />
-            </NativeTabs.Trigger>
-            <NativeTabs.Trigger name="inbox">
-                <NativeTabs.Trigger.Label>Inbox</NativeTabs.Trigger.Label>
-                <NativeTabs.Trigger.Icon src={require("../../../../assets/tabs/chat-round-line.png")} renderingMode="template" />
-                {unread > 0 ? <NativeTabs.Trigger.Badge>{unread > 9 ? "9+" : String(unread)}</NativeTabs.Trigger.Badge> : null}
-            </NativeTabs.Trigger>
-            <NativeTabs.Trigger name="sales">
-                <NativeTabs.Trigger.Label>Sales</NativeTabs.Trigger.Label>
-                <NativeTabs.Trigger.Icon src={require("../../../../assets/tabs/bag-4.png")} renderingMode="template" />
-            </NativeTabs.Trigger>
-            <NativeTabs.Trigger name="money">
-                <NativeTabs.Trigger.Label>Money</NativeTabs.Trigger.Label>
-                <NativeTabs.Trigger.Icon src={require("../../../../assets/tabs/wallet.png")} renderingMode="template" />
-            </NativeTabs.Trigger>
-            <NativeTabs.Trigger name="assistant">
-                <NativeTabs.Trigger.Label>AI</NativeTabs.Trigger.Label>
-                <NativeTabs.Trigger.Icon src={require("../../../../assets/tabs/stars-minimalistic.png")} renderingMode="template" />
-            </NativeTabs.Trigger>
-            <NativeTabs.Trigger name="copilot" {...(COPILOT_APART ? { role: "search" as const, disableAutomaticSearchActivation: true } : {})}>
-                <NativeTabs.Trigger.Label>Copilot</NativeTabs.Trigger.Label>
-                <NativeTabs.Trigger.Icon src={require("../../../../assets/tabs/airdrop.png")} renderingMode="template" />
-            </NativeTabs.Trigger>
-        </NativeTabs>
+        <Tabs tabBar={(props) => <TabPill {...props} />} screenOptions={{ headerShown: false }}>
+            {TABS.map((tab) => <Tabs.Screen key={tab.name} name={tab.name} />)}
+        </Tabs>
+    );
+}
+
+/** The web's pill: rounded-full, border-border/60, bg-background/90 with a blur, p-1, gap-3; each tab a 48px circle, the current one ringed. */
+function TabPill({ state, navigateToTab }: BottomTabBarProps) {
+    const colors = useColors();
+    const insets = useSafeAreaInsets();
+    const glass = { borderWidth: 1, borderColor: alpha(colors.border, 0.6), backgroundColor: alpha(colors.background, 0.9), overflow: "hidden" as const };
+    const blur = <BlurView intensity={30} tint={colors.scheme} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />;
+    return (
+        <View pointerEvents="box-none" style={{ position: "absolute", left: 0, right: 0, bottom: insets.bottom + 16, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8 }}>
+            <View style={[glass, { flexDirection: "row", gap: 12, padding: 4, borderRadius: 999 }]}>
+                {blur}
+                {TABS.map((tab) => {
+                    const index = state.routes.findIndex((route) => route.name === tab.name);
+                    const active = state.index === index;
+                    const color = active ? colors.foreground : colors.mutedForeground;
+                    return (
+                        <Pressable
+                            key={tab.name}
+                            accessibilityRole="tab"
+                            accessibilityState={{ selected: active }}
+                            accessibilityLabel={tab.label}
+                            onPress={() => { if (!active) navigateToTab(state.routes[index].key); }}
+                            style={{ width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center", gap: 2, borderWidth: 1, borderColor: active ? colors.border : "transparent" }}
+                        >
+                            <View>
+                                <Icon name={tab.icon} size={18} color={color} />
+                                {tab.name === "inbox" ? <UnreadBadge /> : null}
+                            </View>
+                            <T size={9} leading={11} color={color}>{tab.label}</T>
+                        </Pressable>
+                    );
+                })}
+            </View>
+            {/* Copilot: one tap into it, a round button as tall as the pill. */}
+            <Pressable onPress={() => router.push("/copilot")} accessibilityRole="button" accessibilityLabel="Ask or change anything" style={[glass, { width: 58, height: 58, borderRadius: 29, alignItems: "center", justifyContent: "center" }]}>
+                {blur}
+                <Icon name="airdrop:huge" size={20} color={colors.foreground} />
+            </Pressable>
+        </View>
+    );
+}
+
+/** The number of unread chats, on the Inbox tab. */
+function UnreadBadge() {
+    const count = (useInbox().data?.conversations ?? []).filter((conversation) => conversation.unread).length;
+    if (count === 0) return null;
+    return (
+        <View style={{ position: "absolute", right: -10, top: -6, height: 16, minWidth: 16, borderRadius: 8, paddingHorizontal: 4, alignItems: "center", justifyContent: "center", backgroundColor: palette.emerald600 }}>
+            <T size={9} weight="600" leading={11} color="#ffffff">{count > 9 ? "9+" : String(count)}</T>
+        </View>
     );
 }
