@@ -8,7 +8,8 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.cencori.studio"
+      "bundleIdentifier": "com.cencori.studio",
+      "backgroundColor": "#000000"
     },
     "android": {
       "adaptiveIcon": {
@@ -47,11 +48,13 @@
           "cameraPermission": "Studio uses the camera to photograph your menu or price list."
         }
       ],
-      "expo-asset"
+      "expo-asset",
+      "expo-system-ui"
     ],
     "scheme": "cencori-studio",
     "experiments": {
       "typedRoutes": false
-    }
+    },
+    "backgroundColor": "#000000"
   }
 }
