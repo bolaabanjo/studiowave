@@ -168,7 +168,7 @@ function GuestRow({ guest, tier, first }: { guest: StudioGuest; tier: string; fi
                 <T lines={1}>{guest.buyer_name || "Guest"}</T>
                 <T size={13} muted lines={1}>{tier} · {guest.code}{guest.buyer_phone ? ` · ${guest.buyer_phone}` : ""}</T>
             </View>
-            <Tag tone={guest.checked_in_at ? "good" : "off"} label={guest.checked_in_at ? "In" : "Not yet"} />
+            <Tag tone={guest.checked_in_at ? "good" : "off"} label={guest.checked_in_at ? "In" : "Not yet"} style={{ alignSelf: "center" }} />
         </View>
     );
 }

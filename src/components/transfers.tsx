@@ -78,7 +78,7 @@ export function GetPaidCard({ accounts, payments, onConnectProvider }: { account
                         <View style={{ flex: 1, minWidth: 0 }}>
                             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                                 <T weight="600">{PROVIDERS[payments.provider] ?? "Payment link"}</T>
-                                {payments.mode === "test" ? <Tag tone="amber" label="Test" /> : null}
+                                {payments.mode === "test" ? <Tag tone="amber" label="Test" style={{ alignSelf: "center" }} /> : null}
                             </View>
                             <T size={13} muted>Payments go straight to your account</T>
                         </View>
@@ -91,7 +91,7 @@ export function GetPaidCard({ accounts, payments, onConnectProvider }: { account
                             <T weight="600" lines={1}>{account.account_name}</T>
                             <T size={13} muted lines={1}>{shortBankName(account.bank)} · {account.account_number}</T>
                         </View>
-                        {index === 0 && accounts.length > 1 ? <Tag tone="neutral" label="Main" /> : null}
+                        {index === 0 && accounts.length > 1 ? <Tag tone="neutral" label="Main" style={{ alignSelf: "center" }} /> : null}
                         {chevron}
                     </Pressable>
                 ))}

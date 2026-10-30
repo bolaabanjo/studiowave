@@ -109,7 +109,7 @@ export default function AssistantDetail() {
                     <>
                         <View style={{ marginTop: 8, flexDirection: "row", alignItems: "center", gap: 8 }}>
                             <T size={26} weight="600" leading={32} lines={1} style={{ flexShrink: 1, letterSpacing: -0.65 }}>{assistant.name}</T>
-                            {status ? <Tag tone={status.tone} label={status.label} /> : null}
+                            {status ? <Tag tone={status.tone} label={status.label} style={{ alignSelf: "center" }} /> : null}
                         </View>
 
                         <View style={{ marginTop: 16, flexDirection: "row", alignItems: "center", gap: 8 }}>

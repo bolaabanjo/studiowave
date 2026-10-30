@@ -185,7 +185,7 @@ export function IconButton({ name, onPress, label, size = 40, iconSize = 20, kin
 export type TagTone = "good" | "wait" | "off" | "amber" | "violet" | "neutral";
 
 /** A small status tag (text-[11px] font-semibold), as on Sales, the inbox and the AI tab. */
-export function Tag({ label, tone, round }: { label: string; tone: TagTone; round?: boolean }) {
+export function Tag({ label, tone, round, style }: { label: string; tone: TagTone; round?: boolean; style?: StyleProp<ViewStyle> }) {
     const colors = useColors();
     const darkMode = colors.scheme === "dark";
     const look = {
@@ -197,7 +197,7 @@ export function Tag({ label, tone, round }: { label: string; tone: TagTone; roun
         neutral: { background: alpha(colors.foreground, 0.1), color: colors.foreground },
     }[tone];
     return (
-        <View style={{ alignSelf: "flex-start", borderRadius: round ? 999 : 6, paddingHorizontal: round ? 8 : 6, paddingVertical: 2, backgroundColor: look.background }}>
+        <View style={[{ alignSelf: "flex-start", borderRadius: round ? 999 : 6, paddingHorizontal: round ? 8 : 6, paddingVertical: 2, backgroundColor: look.background }, style]}>
             <T size={11} weight="600" leading={16} color={look.color}>{label}</T>
         </View>
     );

@@ -53,7 +53,7 @@ export default function Assistants() {
                         <Pressable onPress={() => tasks.open("plans")} style={pill}>
                             <View style={{ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: alpha(colors.foreground, 0.1) }}><Icon name="plus:lucide" size={20} color={colors.foreground} /></View>
                             <T weight="600" style={{ flex: 1 }}>Add assistant</T>
-                            <Tag tone="violet" label="Upgrade" />
+                            <Tag tone="violet" label="Upgrade" style={{ alignSelf: "center" }} />
                             {chevron}
                         </Pressable>
                     ) : (
