@@ -5,6 +5,7 @@ import { useInbox, useOverview } from "@/lib/queries";
 import { useWorkspace } from "@/lib/workspace";
 import { greeting, setupSteps } from "@/lib/format";
 import { useTasks } from "@/lib/tasks";
+import { COPILOT_TAB } from "@/lib/copilot-tab";
 import type { StudioOverview } from "@/lib/types";
 import { BriefSection, NeedsYouSection, QuickActions, SetupSection, TodayCard, UpNextSection } from "@/components/home";
 import { Icon } from "@/ui/icons";
@@ -33,6 +34,7 @@ export default function Home() {
                     <T size={12} muted lines={1}>{organization.name}</T>
                     <T size={20} weight="600" leading={25} style={{ letterSpacing: -0.5 }}>{greeting()}{user.firstName ? `, ${user.firstName}` : ""}</T>
                 </View>
+                {setUp && !COPILOT_TAB ? <CopilotButton /> : null}
                 {setUp ? <NotificationBell /> : null}
             </View>
 
@@ -68,6 +70,20 @@ export default function Home() {
                 </>
             )}
         </Page>
+    );
+}
+
+/** Copilot, where it has no tab of its own (Android, iOS before 26.1): beside the bell. */
+function CopilotButton() {
+    const colors = useColors();
+    return (
+        <Pressable
+            onPress={() => router.push("/copilot")}
+            accessibilityLabel="Ask or change anything"
+            style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: alpha(colors.border, 0.6) }}
+        >
+            <Icon name="airdrop:huge" size={20} color={colors.foreground} />
+        </Pressable>
     );
 }
 

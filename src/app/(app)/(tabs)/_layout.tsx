@@ -1,10 +1,7 @@
-import { Platform } from "react-native";
 import { NativeTabs } from "expo-router/native-tabs";
+import { COPILOT_TAB } from "@/lib/copilot-tab";
 import { useInbox } from "@/lib/queries";
 import { fonts, palette, useColors } from "@/ui/theme";
-
-/** iOS 26.1 shows a "search" tab as its own circle beside the others: Copilot's place, as on the web. */
-const COPILOT_APART = Platform.OS === "ios" && Number.parseFloat(String(Platform.Version)) >= 26.1;
 
 /**
  * The tabs: the phone's own tab bar, with the web Studio's icons and words
@@ -42,7 +39,7 @@ export default function TabsLayout() {
                 <NativeTabs.Trigger.Label>AI</NativeTabs.Trigger.Label>
                 <NativeTabs.Trigger.Icon src={require("../../../../assets/tabs/stars-minimalistic.png")} renderingMode="template" />
             </NativeTabs.Trigger>
-            <NativeTabs.Trigger name="copilot" {...(COPILOT_APART ? { role: "search" as const, disableAutomaticSearchActivation: true } : {})}>
+            <NativeTabs.Trigger name="copilot" {...(COPILOT_TAB ? { role: "search" as const, disableAutomaticSearchActivation: true } : { hidden: true })}>
                 <NativeTabs.Trigger.Label>Copilot</NativeTabs.Trigger.Label>
                 <NativeTabs.Trigger.Icon src={require("../../../../assets/tabs/airdrop.png")} renderingMode="template" />
             </NativeTabs.Trigger>
