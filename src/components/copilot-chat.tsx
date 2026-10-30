@@ -9,7 +9,7 @@ import { useSession } from "@/lib/session";
 import { useTasks, type StudioTask } from "@/lib/tasks";
 import { Icon } from "@/ui/icons";
 import { Markdown } from "@/ui/markdown";
-import { KeyboardSafe, SHEET_TOP, Spinner, T, useKeyboard } from "@/ui/kit";
+import { KeyboardSafe, Spinner, T, useKeyboard } from "@/ui/kit";
 import { alpha, fonts, palette, useColors } from "@/ui/theme";
 
 /** Room for the tab bar under Copilot's box when it's a tab (the native bar floats over the screen). */
@@ -60,7 +60,7 @@ export function CopilotChat({ inTab }: { inTab?: boolean }) {
     return (
         <KeyboardSafe style={{ backgroundColor: colors.background }}>
             {inTab ? <View style={{ height: insets.top }} /> : (
-                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: SHEET_TOP }}>
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: 12 }}>
                     <View style={{ width: 36 }} />
                     <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: alpha(colors.mutedForeground, 0.3) }} />
                     <Pressable onPress={() => router.back()} accessibilityLabel="Close" style={{ width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: alpha(colors.border, 0.6) }}>
@@ -68,7 +68,7 @@ export function CopilotChat({ inTab }: { inTab?: boolean }) {
                     </Pressable>
                 </View>
             )}
-            <ScrollView ref={scroll} contentInsetAdjustmentBehavior="never" onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: true })} style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16 }} keyboardShouldPersistTaps="handled">
+            <ScrollView ref={scroll} onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: true })} style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16 }} keyboardShouldPersistTaps="handled">
                 {shown.length === 0 && !copilot.busy ? (
                     <View style={{ paddingTop: 16 }}>
                         <T size={18} weight="600">Change something</T>

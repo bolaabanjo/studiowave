@@ -481,9 +481,6 @@ export function measureAnchor(view: HostInstance | null, align: "left" | "right"
     });
 }
 
-/** Room above a sheet's first line: clear of iOS 26's large rounded sheet corners. */
-export const SHEET_TOP = 24;
-
 /**
  * A tall sheet from below (the web's vaul sheets): the phone's own page
  * sheet on iOS, drag down to close; full screen sliding up on Android.
@@ -491,12 +488,12 @@ export const SHEET_TOP = 24;
 export function Sheet({ open, onClose, children, scroll = true }: { open: boolean; onClose: () => void; children: ReactNode; scroll?: boolean }) {
     const colors = useColors();
     const insets = useSafeAreaInsets();
-    const padding = { paddingHorizontal: 20, paddingTop: Platform.OS === "ios" ? SHEET_TOP : insets.top + SHEET_TOP, paddingBottom: insets.bottom + 20 };
+    const padding = { paddingHorizontal: 20, paddingTop: Platform.OS === "ios" ? 12 : insets.top + 12, paddingBottom: insets.bottom + 20 };
     return (
         <Modal visible={open} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
             <KeyboardSafe style={{ backgroundColor: colors.background }}>
                 {scroll
-                    ? <ScrollView contentInsetAdjustmentBehavior="never" contentContainerStyle={[padding, { flexGrow: 1 }]} keyboardShouldPersistTaps="handled">{children}</ScrollView>
+                    ? <ScrollView contentContainerStyle={[padding, { flexGrow: 1 }]} keyboardShouldPersistTaps="handled">{children}</ScrollView>
                     : <View style={[padding, { flex: 1 }]}>{children}</View>}
             </KeyboardSafe>
         </Modal>

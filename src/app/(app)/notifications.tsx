@@ -6,7 +6,7 @@ import { usePushState } from "@/lib/push";
 import { useWorkspace } from "@/lib/workspace";
 import { shortTime } from "@/lib/format";
 import { Icon } from "@/ui/icons";
-import { Button, SHEET_TOP, T } from "@/ui/kit";
+import { Button, T } from "@/ui/kit";
 import { alpha, palette, useColors } from "@/ui/theme";
 
 /**
@@ -23,7 +23,7 @@ export default function Notifications() {
     const darkMode = colors.scheme === "dark";
     const orangeLine = darkMode ? alpha(palette.orange500, 0.2) : palette.orange200;
     return (
-        <ScrollView style={{ backgroundColor: colors.background }} contentInsetAdjustmentBehavior="never" contentContainerStyle={{ paddingHorizontal: 16, paddingTop: SHEET_TOP, paddingBottom: insets.bottom + 24 }}>
+        <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: insets.bottom + 24 }}>
             <View style={{ alignItems: "center" }}><View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: alpha(colors.mutedForeground, 0.3) }} /></View>
             <T weight="600" center style={{ marginTop: 12 }}>Notifications</T>
             <View style={{ marginTop: 16 }}>
