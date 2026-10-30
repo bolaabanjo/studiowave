@@ -46,7 +46,8 @@ export default function AppLayout() {
                     <Stack.Screen name="setup" options={{ presentation: "fullScreenModal" }} />
                     <Stack.Screen name="profile" options={sheet} />
                     <Stack.Screen name="notifications" options={sheet} />
-                    <Stack.Screen name="qr" options={sheet} />
+                    {/* Half height, sized to the code and its buttons: content-sized sheets work when the screen's root isn't flex: 1 (that measured to nothing, the blank sheets). */}
+                    <Stack.Screen name="qr" options={{ presentation: "formSheet", sheetAllowedDetents: "fitToContents", sheetGrabberVisible: false, sheetCornerRadius: 24, contentStyle: { backgroundColor: colors.background } }} />
                     <Stack.Screen name="copilot" options={sheet} />
                     <Stack.Screen name="task/[task]" options={sheet} />
                 </Stack>
