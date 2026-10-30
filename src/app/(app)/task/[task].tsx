@@ -6,7 +6,7 @@ import { useWorkspace } from "@/lib/workspace";
 import type { StudioTask } from "@/lib/tasks";
 import { AlertsTask, BusinessTask, EventTask, GoLiveTask, KnowledgeTask, LaterTask, NewBusinessTask, PaymentsTask, PlansTask, WebsiteTask, WhatsAppTask } from "@/components/tasks";
 import { ProductsTask } from "@/components/products";
-import { KeyboardSafe, SHEET_TOP, SheetHeader, T, useKeyboard } from "@/ui/kit";
+import { KeyboardSafe, SheetHeader, T, useKeyboard, useSheetTop } from "@/ui/kit";
 import { useColors } from "@/ui/theme";
 
 const TITLES: Record<StudioTask, string> = {
@@ -32,6 +32,7 @@ export default function Task() {
     const params = useLocalSearchParams<{ task: StudioTask; agentId?: string; eventId?: string; business?: string }>();
     const colors = useColors();
     const insets = useSafeAreaInsets();
+    const sheetTop = useSheetTop();
     const queryClient = useQueryClient();
     const keyboard = useKeyboard();
     const { workspace } = useWorkspace();
@@ -64,7 +65,7 @@ export default function Task() {
     return (
         <KeyboardSafe style={{ backgroundColor: colors.background }}>
             {/* The title scrolls with the sheet's content, so nothing can sit over it. */}
-            <ScrollView contentContainerStyle={{ flexGrow: FILLS.has(task) ? 1 : undefined, paddingHorizontal: 20, paddingTop: SHEET_TOP, paddingBottom: keyboard.shown ? 12 : insets.bottom + 20 }} keyboardShouldPersistTaps="handled">
+            <ScrollView contentContainerStyle={{ flexGrow: FILLS.has(task) ? 1 : undefined, paddingHorizontal: 20, paddingTop: sheetTop, paddingBottom: keyboard.shown ? 12 : insets.bottom + 20 }} keyboardShouldPersistTaps="handled">
                 <View style={{ marginBottom: 4 }}><SheetHeader title={title} onClose={() => router.back()} /></View>
                 {body}
             </ScrollView>

@@ -541,3 +541,9 @@ export function KeyboardSafe({ children, style }: { children: ReactNode; style?:
     const lift = keyboard.shown ? Math.max(0, Dimensions.get("window").height - keyboard.top) : 0;
     return <View style={[{ flex: 1, paddingBottom: lift }, style]}>{children}</View>;
 }
+
+/** Room above a sheet's first line: SHEET_TOP on iOS's card, and the status bar too on Android, where sheets fill the screen. */
+export function useSheetTop(): number {
+    const insets = useSafeAreaInsets();
+    return Platform.OS === "ios" ? SHEET_TOP : insets.top + SHEET_TOP;
+}

@@ -6,7 +6,7 @@ import QRCode from "react-native-qrcode-svg";
 import { captureRef } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
 import { Icon } from "@/ui/icons";
-import { Button, SHEET_TOP, SheetHeader, T } from "@/ui/kit";
+import { Button, SheetHeader, T, useSheetTop } from "@/ui/kit";
 import { useColors } from "@/ui/theme";
 
 /**
@@ -18,6 +18,7 @@ export default function LinkQr() {
     const { url, name } = useLocalSearchParams<{ url: string; name: string }>();
     const colors = useColors();
     const insets = useSafeAreaInsets();
+    const sheetTop = useSheetTop();
     const card = useRef<HostInstance>(null);
     const [saving, setSaving] = useState(false);
 
@@ -35,7 +36,7 @@ export default function LinkQr() {
     };
 
     return (
-        <View style={{ flex: 1, backgroundColor: colors.background, paddingHorizontal: 20, paddingTop: SHEET_TOP, paddingBottom: insets.bottom + 20 }}>
+        <View style={{ flex: 1, backgroundColor: colors.background, paddingHorizontal: 20, paddingTop: sheetTop, paddingBottom: insets.bottom + 20 }}>
             <SheetHeader title="Your QR code" onClose={() => router.back()} description="Customers scan it to chat with your assistant. Put it on tables, your counter, flyers or packaging." />
             <View style={{ marginTop: 20, alignSelf: "center", width: "100%", maxWidth: 280, aspectRatio: 1, borderRadius: 24, backgroundColor: "#ffffff", padding: 16 }}>
                 <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>

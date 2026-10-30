@@ -32,7 +32,9 @@ export default function AppLayout() {
             </Centered>
         );
     }
-    const sheet = { presentation: "formSheet" as const, sheetGrabberVisible: false, sheetCornerRadius: 24, contentStyle: { backgroundColor: colors.background } };
+    // Sheets are iOS's standard card (a page sheet; full screen on Android). Form sheets with set
+    // heights didn't lay their content out: blank, or the content over the header.
+    const sheet = { presentation: "modal" as const, contentStyle: { backgroundColor: colors.background } };
     return (
         <WorkspaceProvider workspace={workspace} choose={choose}>
             <CopilotProvider workspace={workspace}>
@@ -42,11 +44,11 @@ export default function AppLayout() {
                     <Stack.Screen name="assistant/[id]" />
                     <Stack.Screen name="event/[id]" />
                     <Stack.Screen name="setup" options={{ presentation: "fullScreenModal" }} />
-                    <Stack.Screen name="profile" options={{ ...sheet, sheetAllowedDetents: [0.92] }} />
-                    <Stack.Screen name="notifications" options={{ ...sheet, sheetAllowedDetents: [0.6, 1] }} />
-                    <Stack.Screen name="qr" options={{ ...sheet, sheetAllowedDetents: "fitToContents" }} />
-                    <Stack.Screen name="copilot" options={{ ...sheet, sheetAllowedDetents: [0.88] }} />
-                    <Stack.Screen name="task/[task]" options={{ ...sheet, sheetAllowedDetents: [0.92] }} />
+                    <Stack.Screen name="profile" options={sheet} />
+                    <Stack.Screen name="notifications" options={sheet} />
+                    <Stack.Screen name="qr" options={sheet} />
+                    <Stack.Screen name="copilot" options={sheet} />
+                    <Stack.Screen name="task/[task]" options={sheet} />
                 </Stack>
             </CopilotProvider>
         </WorkspaceProvider>
