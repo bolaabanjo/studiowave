@@ -13,7 +13,7 @@ import { useTasks } from "@/lib/tasks";
 import { useThemeChoice, type ThemeChoice } from "@/lib/theme-choice";
 import { useWorkspace } from "@/lib/workspace";
 import { Icon, type IconName } from "@/ui/icons";
-import { ErrorText, PersonAvatar, T } from "@/ui/kit";
+import { ErrorText, PersonAvatar, SHEET_TOP, T } from "@/ui/kit";
 import { alpha, palette, useColors } from "@/ui/theme";
 
 /** One row of a group: icon, label, and what sits on the right. */
@@ -149,7 +149,7 @@ export default function Profile() {
             : <T size={14} weight="600">{push.busy ? "Turning on…" : "Turn on"}</T>;
 
     return (
-        <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: insets.bottom + 24 }}>
+        <ScrollView style={{ backgroundColor: colors.background }} contentInsetAdjustmentBehavior="never" contentContainerStyle={{ paddingHorizontal: 16, paddingTop: SHEET_TOP, paddingBottom: insets.bottom + 24 }}>
             <View style={{ alignItems: "center" }}><View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: alpha(colors.mutedForeground, 0.3) }} /></View>
             {screen === "businesses" ? (
                 <>
