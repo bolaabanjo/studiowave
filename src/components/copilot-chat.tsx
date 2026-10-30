@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Animated, KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View, type ScrollViewInstance } from "react-native";
+import { Animated, Pressable, ScrollView, TextInput, View, type ScrollViewInstance } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Clipboard from "expo-clipboard";
@@ -9,7 +9,7 @@ import { useSession } from "@/lib/session";
 import { useTasks, type StudioTask } from "@/lib/tasks";
 import { Icon } from "@/ui/icons";
 import { Markdown } from "@/ui/markdown";
-import { Spinner, T } from "@/ui/kit";
+import { KeyboardSafe, Spinner, T, useKeyboard } from "@/ui/kit";
 import { alpha, fonts, palette, useColors } from "@/ui/theme";
 
 /** Room for the tab bar under Copilot's box when it's a tab (the native bar floats over the screen). */
@@ -31,6 +31,7 @@ export function CopilotChat({ inTab }: { inTab?: boolean }) {
     const insets = useSafeAreaInsets();
     const params = useLocalSearchParams<{ ask?: string }>();
     const copilot = useCopilot();
+    const keyboard = useKeyboard();
     const tasks = useTasks();
     // "For Ada: " is a start for the owner to finish, not a question: it goes in the box.
     const [input, setInput] = useState(params.ask?.endsWith(": ") ? params.ask : "");
@@ -57,7 +58,7 @@ export function CopilotChat({ inTab }: { inTab?: boolean }) {
     };
 
     return (
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1, backgroundColor: colors.background }}>
+        <KeyboardSafe style={{ backgroundColor: colors.background }}>
             {inTab ? <View style={{ height: insets.top }} /> : (
                 <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: 12 }}>
                     <View style={{ width: 36 }} />
@@ -97,7 +98,7 @@ export function CopilotChat({ inTab }: { inTab?: boolean }) {
                     </View>
                 )}
             </ScrollView>
-            <View style={{ paddingHorizontal: 16, paddingBottom: insets.bottom + (inTab ? TAB_BAR_HEIGHT : 0) + 16 }}>
+            <View style={{ paddingHorizontal: 16, paddingBottom: keyboard.shown ? 12 : insets.bottom + (inTab ? TAB_BAR_HEIGHT : 0) + 16 }}>
                 {copilot.secret ? <SecretCard title={copilot.secret.title} secret={copilot.secret.secret} onDismiss={() => copilot.setSecret(null)} /> : null}
                 {pending ? (
                     <ActionConfirm
@@ -132,7 +133,7 @@ export function CopilotChat({ inTab }: { inTab?: boolean }) {
                     )}
                 </View>
             </View>
-        </KeyboardAvoidingView>
+        </KeyboardSafe>
     );
 }
 

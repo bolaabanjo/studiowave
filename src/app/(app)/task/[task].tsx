@@ -1,4 +1,4 @@
-import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
+import { ScrollView, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQueryClient } from "@tanstack/react-query";
@@ -6,7 +6,7 @@ import { useWorkspace } from "@/lib/workspace";
 import type { StudioTask } from "@/lib/tasks";
 import { AlertsTask, BusinessTask, EventTask, GoLiveTask, KnowledgeTask, LaterTask, NewBusinessTask, PaymentsTask, PlansTask, WebsiteTask, WhatsAppTask } from "@/components/tasks";
 import { ProductsTask } from "@/components/products";
-import { SheetHeader, T } from "@/ui/kit";
+import { KeyboardSafe, SheetHeader, T, useKeyboard } from "@/ui/kit";
 import { useColors } from "@/ui/theme";
 
 const TITLES: Record<StudioTask, string> = {
@@ -33,6 +33,7 @@ export default function Task() {
     const colors = useColors();
     const insets = useSafeAreaInsets();
     const queryClient = useQueryClient();
+    const keyboard = useKeyboard();
     const { workspace } = useWorkspace();
     const task = params.task in TITLES ? params.task : "later";
     const done = () => {
@@ -61,11 +62,11 @@ export default function Task() {
     })();
 
     return (
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1, backgroundColor: colors.background }}>
+        <KeyboardSafe style={{ backgroundColor: colors.background }}>
             <View style={{ paddingHorizontal: 20, paddingTop: 12 }}><SheetHeader title={title} onClose={() => router.back()} /></View>
-            <ScrollView contentContainerStyle={{ flexGrow: FILLS.has(task) ? 1 : undefined, paddingHorizontal: 20, paddingTop: 4, paddingBottom: insets.bottom + 20 }} keyboardShouldPersistTaps="handled">
+            <ScrollView contentContainerStyle={{ flexGrow: FILLS.has(task) ? 1 : undefined, paddingHorizontal: 20, paddingTop: 4, paddingBottom: keyboard.shown ? 12 : insets.bottom + 20 }} keyboardShouldPersistTaps="handled">
                 {body}
             </ScrollView>
-        </KeyboardAvoidingView>
+        </KeyboardSafe>
     );
 }

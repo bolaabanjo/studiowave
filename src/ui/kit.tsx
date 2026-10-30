@@ -1,5 +1,5 @@
-import { forwardRef, useEffect, useState, type ReactNode } from "react";
-import { ActivityIndicator, Animated, Dimensions, Image, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, Text, TextInput, View, type StyleProp, type HostInstance, type TextInputInstance, type TextInputProps, type TextStyle, type ViewStyle } from "react-native";
+import { forwardRef, useEffect, useRef, useState, type ReactNode } from "react";
+import { ActivityIndicator, Animated, Dimensions, Image, Keyboard, Modal, Platform, Pressable, RefreshControl, ScrollView, Text, TextInput, View, type StyleProp, type HostInstance, type TextInputInstance, type TextInputProps, type TextStyle, type ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Defs, Path, RadialGradient, Rect, Stop } from "react-native-svg";
 import { ApiError } from "@/lib/api";
@@ -491,11 +491,11 @@ export function Sheet({ open, onClose, children, scroll = true }: { open: boolea
     const padding = { paddingHorizontal: 20, paddingTop: Platform.OS === "ios" ? 12 : insets.top + 12, paddingBottom: insets.bottom + 20 };
     return (
         <Modal visible={open} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-            <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1, backgroundColor: colors.background }}>
+            <KeyboardSafe style={{ backgroundColor: colors.background }}>
                 {scroll
                     ? <ScrollView contentContainerStyle={[padding, { flexGrow: 1 }]} keyboardShouldPersistTaps="handled">{children}</ScrollView>
                     : <View style={[padding, { flex: 1 }]}>{children}</View>}
-            </KeyboardAvoidingView>
+            </KeyboardSafe>
         </Modal>
     );
 }
@@ -512,3 +512,35 @@ export const Field = forwardRef<TextInputInstance, TextInputProps & { flat?: boo
         />
     );
 });
+
+/** Whether the keyboard is up, and where its top edge is on screen. */
+export function useKeyboard(): { shown: boolean; top: number } {
+    const [state, setState] = useState({ shown: false, top: Dimensions.get("window").height });
+    useEffect(() => {
+        const show = Keyboard.addListener(Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow", (event) => setState({ shown: true, top: event.endCoordinates.screenY }));
+        const hide = Keyboard.addListener(Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide", () => setState({ shown: false, top: Dimensions.get("window").height }));
+        return () => {
+            show.remove();
+            hide.remove();
+        };
+    }, []);
+    return state;
+}
+
+/**
+ * Keeps what's at the bottom (a message box, a Save button) just above the
+ * keyboard. It measures where it really sits on screen, so it's right inside
+ * a sheet that doesn't reach the top, where the standard KeyboardAvoidingView
+ * comes up short.
+ */
+export function KeyboardSafe({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
+    const keyboard = useKeyboard();
+    const box = useRef<HostInstance>(null);
+    const [bottom, setBottom] = useState<number | null>(null);
+    useEffect(() => {
+        if (!keyboard.shown) return;
+        box.current?.measureInWindow((_x, y, _width, height) => setBottom(y + height));
+    }, [keyboard.shown, keyboard.top]);
+    const lift = keyboard.shown && bottom !== null ? Math.max(0, bottom - keyboard.top) : 0;
+    return <View ref={box} style={[{ flex: 1, paddingBottom: lift }, style]}>{children}</View>;
+}
