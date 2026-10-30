@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useRef, useState, type ReactNode } from "react";
+import { forwardRef, useEffect, useState, type ReactNode } from "react";
 import { ActivityIndicator, Animated, Dimensions, Image, Keyboard, Modal, Platform, Pressable, RefreshControl, ScrollView, Text, TextInput, View, type StyleProp, type HostInstance, type TextInputInstance, type TextInputProps, type TextStyle, type ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Defs, Path, RadialGradient, Rect, Stop } from "react-native-svg";
@@ -529,18 +529,12 @@ export function useKeyboard(): { shown: boolean; top: number } {
 
 /**
  * Keeps what's at the bottom (a message box, a Save button) just above the
- * keyboard. It measures where it really sits on screen, so it's right inside
- * a sheet that doesn't reach the top, where the standard KeyboardAvoidingView
- * comes up short.
+ * keyboard. Sheets end at the bottom of the screen, so that's the keyboard's
+ * height: positions measured inside a sheet are the sheet's own, not the
+ * screen's, which is why the standard KeyboardAvoidingView comes up short there.
  */
 export function KeyboardSafe({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
     const keyboard = useKeyboard();
-    const box = useRef<HostInstance>(null);
-    const [bottom, setBottom] = useState<number | null>(null);
-    useEffect(() => {
-        if (!keyboard.shown) return;
-        box.current?.measureInWindow((_x, y, _width, height) => setBottom(y + height));
-    }, [keyboard.shown, keyboard.top]);
-    const lift = keyboard.shown && bottom !== null ? Math.max(0, bottom - keyboard.top) : 0;
-    return <View ref={box} style={[{ flex: 1, paddingBottom: lift }, style]}>{children}</View>;
+    const lift = keyboard.shown ? Math.max(0, Dimensions.get("window").height - keyboard.top) : 0;
+    return <View style={[{ flex: 1, paddingBottom: lift }, style]}>{children}</View>;
 }
