@@ -36,8 +36,7 @@ export default function Money() {
 
     return (
         <Page
-            refreshing={money.isRefetching}
-            onRefresh={() => void money.refetch()}
+            onRefresh={() => money.refetch()}
             header={
                 <>
                     <PageTitle>Money</PageTitle>

@@ -57,8 +57,7 @@ export default function Inbox() {
     return (
         <Page
             fill={empty}
-            refreshing={inbox.isRefetching}
-            onRefresh={() => void inbox.refetch()}
+            onRefresh={() => inbox.refetch()}
             header={
                 <>
                     <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>

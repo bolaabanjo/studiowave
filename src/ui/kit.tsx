@@ -52,17 +52,25 @@ export const TAB_ROOM = 32;
 /**
  * A tab's page: the header (title and switcher) stays put while the rest
  * scrolls under it, as the web's sticky header does; pull to refresh.
+ * The spinner is the pull's own, held until onRefresh settles: a query's
+ * isRefetching is also true for every background poll, and on iOS that
+ * dropped the spinner (and a gap) over the list every few seconds.
  */
-export function Page({ header, children, refreshing, onRefresh, fill, tabs = true }: { header?: ReactNode; children: ReactNode; refreshing?: boolean; onRefresh?: () => void; fill?: boolean; tabs?: boolean }) {
+export function Page({ header, children, onRefresh, fill, tabs = true }: { header?: ReactNode; children: ReactNode; onRefresh?: () => Promise<unknown>; fill?: boolean; tabs?: boolean }) {
     const colors = useColors();
     const insets = useSafeAreaInsets();
+    const [pulling, setPulling] = useState(false);
+    const refresh = () => {
+        setPulling(true);
+        void onRefresh?.().catch(() => undefined).finally(() => setPulling(false));
+    };
     return (
         <View style={{ flex: 1, backgroundColor: colors.background }}>
             {header ? <View style={{ paddingTop: insets.top + 20, paddingHorizontal: 16, paddingBottom: 12, backgroundColor: colors.background }}>{header}</View> : null}
             <ScrollView
                 style={{ flex: 1 }}
                 contentContainerStyle={[{ paddingHorizontal: 16, paddingTop: header ? 0 : insets.top + 20, paddingBottom: insets.bottom + (tabs ? TAB_ROOM : 32) }, fill && { flexGrow: 1 }]}
-                refreshControl={onRefresh ? <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} tintColor={colors.mutedForeground} /> : undefined}
+                refreshControl={onRefresh ? <RefreshControl refreshing={pulling} onRefresh={refresh} tintColor={colors.mutedForeground} /> : undefined}
                 keyboardShouldPersistTaps="handled"
             >
                 {children}

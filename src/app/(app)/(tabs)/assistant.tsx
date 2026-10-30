@@ -21,7 +21,7 @@ export default function Assistants() {
     const chevron = <Icon name="chevron-right:lucide" size={16} color={colors.mutedForeground} />;
 
     return (
-        <Page refreshing={list.isRefetching} onRefresh={() => void list.refetch()}>
+        <Page onRefresh={() => list.refetch()}>
             <PageTitle>Assistants</PageTitle>
             {list.isLoading ? (
                 <View style={{ marginTop: 20, gap: 10 }}>{[0, 1].map((index) => <Skeleton key={index} height={76} radius={16} />)}</View>

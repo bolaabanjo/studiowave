@@ -59,8 +59,7 @@ export default function Sales() {
     return (
         <Page
             fill={empty || view === "events"}
-            refreshing={sales.isRefetching}
-            onRefresh={() => void sales.refetch()}
+            onRefresh={() => sales.refetch()}
             header={
                 <>
                     <PageTitle>Sales</PageTitle>

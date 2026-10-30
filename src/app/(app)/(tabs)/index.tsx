@@ -25,7 +25,7 @@ export default function Home() {
     const { user, organization } = workspace;
 
     return (
-        <Page fill={!setUp} refreshing={overview.isRefetching} onRefresh={() => { void overview.refetch(); void inbox.refetch(); }}>
+        <Page fill={!setUp} onRefresh={() => Promise.all([overview.refetch(), inbox.refetch()])}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
                 <Pressable onPress={() => router.push("/profile")} accessibilityLabel="You">
                     <PersonAvatar name={user.fullName ?? user.email ?? "?"} url={user.avatarUrl} size={40} />
