@@ -42,7 +42,7 @@ export default function TabsLayout() {
                 <NativeTabs.Trigger.Label>AI</NativeTabs.Trigger.Label>
                 <NativeTabs.Trigger.Icon src={require("../../../../assets/tabs/stars-minimalistic.png")} renderingMode="template" />
             </NativeTabs.Trigger>
-            <NativeTabs.Trigger name="copilot" contentStyle={behind} {...(COPILOT_TAB ? { role: "search" as const, disableAutomaticSearchActivation: true } : { hidden: true })}>
+            <NativeTabs.Trigger name="ask" contentStyle={behind} {...(COPILOT_TAB ? { role: "search" as const, disableAutomaticSearchActivation: true } : { hidden: true })}>
                 <NativeTabs.Trigger.Label>Copilot</NativeTabs.Trigger.Label>
                 <NativeTabs.Trigger.Icon src={require("../../../../assets/tabs/airdrop.png")} renderingMode="template" />
             </NativeTabs.Trigger>
