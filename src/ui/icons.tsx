@@ -1,10 +1,10 @@
-import { createElement, type ComponentType } from "react";
-import Svg, { Circle, Ellipse, Line, Path, Polygon, Polyline, Rect, type PathProps, type SvgProps } from "react-native-svg";
+import { createElement, type ComponentType, type ReactNode } from "react";
+import Svg, { Circle, Ellipse, G, Line, Path, Polygon, Polyline, Rect, type PathProps, type SvgProps } from "react-native-svg";
 import { ICONS, type IconName, type IconNode } from "@/ui/icon-data";
 
 export type { IconName };
 
-const ELEMENTS: Record<string, ComponentType<PathProps>> = { path: Path, circle: Circle, rect: Rect, line: Line, ellipse: Ellipse, polyline: Polyline, polygon: Polygon } as Record<string, ComponentType<PathProps>>;
+const ELEMENTS: Record<string, ComponentType<PathProps>> = { path: Path, g: G, circle: Circle, rect: Rect, line: Line, ellipse: Ellipse, polyline: Polyline, polygon: Polygon } as Record<string, ComponentType<PathProps>>;
 
 /**
  * One of the web Studio's icons (Solar bold duotone by default; see
@@ -14,9 +14,14 @@ export function Icon({ name, size = 20, color, fill }: { name: IconName; size?: 
     const icon = ICONS[name];
     return (
         <Svg width={size} height={size} viewBox="0 0 24 24" color={color} {...(icon.base as SvgProps)} {...(fill ? { fill: "currentColor" } : null)}>
-            {(icon.nodes as IconNode[]).map(([tag, attrs], index) => createElement(ELEMENTS[tag] ?? Path, { key: index, ...(attrs as PathProps) }))}
+            {draw(icon.nodes as IconNode[])}
         </Svg>
     );
+}
+
+/** Groups (duotone's faded layer) carry their children; drop them and that layer vanishes. */
+function draw(nodes: IconNode[]): ReactNode[] {
+    return nodes.map(([tag, attrs, children], index) => createElement(ELEMENTS[tag] ?? Path, { key: index, ...(attrs as PathProps) }, children ? draw(children) : undefined));
 }
 
 /** WhatsApp's glyph: the official 2026 file from WhatsApp's Brand Resource Center, as on the web. */

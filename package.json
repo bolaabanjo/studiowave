@@ -51,6 +51,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
+    "icons": "node scripts/icons.mjs",
     "lint": "expo lint"
   },
   "private": true
