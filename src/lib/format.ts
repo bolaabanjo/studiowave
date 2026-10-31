@@ -64,14 +64,12 @@ export function setupSteps(items: string[]): string[] {
         .map((item) => item.charAt(0).toUpperCase() + item.slice(1));
 }
 
-/** Events happen in Lagos: their times are shown in Lagos time, whatever the phone's own zone. */
-export const EVENT_TIME_ZONE = "Africa/Lagos";
-
-/** "Sat 20 Dec · 8:00 pm", in Lagos time. */
-export function eventWhen(iso: string): string {
+/** "Sat 20 Dec · 8:00 pm", in the business's time zone (useBusinessTimeZone), whatever the phone's own. */
+export function eventWhen(iso: string, timeZone: string | null): string {
     const date = new Date(iso);
-    const day = date.toLocaleDateString("en-GB", { timeZone: EVENT_TIME_ZONE, weekday: "short", day: "numeric", month: "short" });
-    const time = date.toLocaleTimeString("en-GB", { timeZone: EVENT_TIME_ZONE, hour: "numeric", minute: "2-digit", hour12: true });
+    const zone = timeZone ?? undefined;
+    const day = date.toLocaleDateString("en-GB", { timeZone: zone, weekday: "short", day: "numeric", month: "short" });
+    const time = date.toLocaleTimeString("en-GB", { timeZone: zone, hour: "numeric", minute: "2-digit", hour12: true });
     return `${day} · ${time}`;
 }
 

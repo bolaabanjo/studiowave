@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useBusinessTimeZone, zoneCity } from "@/lib/time-zone";
 import { Platform, Pressable, Share, TextInput, View } from "react-native";
 import { router } from "expo-router";
 import { Image } from "expo-image";
@@ -469,6 +470,8 @@ export function TicketTierIcon({ name, index, size = 18 }: { name: string; index
  * a ticket.
  */
 export function EventTask({ eventId, onDone }: { eventId: string | null; onDone: () => void }) {
+    // Times are shown and picked on the business's clock: the form waits for it.
+    const timeZone = useBusinessTimeZone();
     const colors = useColors();
     const api = useApi();
     const projectId = useWorkspace().workspace.project.id;
@@ -574,12 +577,12 @@ export function EventTask({ eventId, onDone }: { eventId: string | null; onDone:
         }
     };
 
-    if (eventId && !loaded) return error ? <ErrorLine error={error} /> : <Loading />;
+    if ((eventId && !loaded) || !timeZone) return error ? <ErrorLine error={error} /> : <Loading />;
     const soldOf = (tier: TierDraft) => (tier.id ? loaded?.sold[tier.id] ?? 0 : 0);
     const anySold = Object.values(loaded?.sold ?? {}).some((count) => count > 0);
     const line = alpha(colors.border, 0.6);
-    // Shown and picked as Lagos time, whatever zone the phone is in.
-    const when = startsAt ? { date: startsAt.toLocaleDateString("en-GB", { timeZone: "Africa/Lagos", weekday: "short", day: "numeric", month: "short", year: "numeric" }), time: startsAt.toLocaleTimeString("en-GB", { timeZone: "Africa/Lagos", hour: "numeric", minute: "2-digit", hour12: true }) } : null;
+    // Shown and picked on the business's clock, whatever zone the phone is in.
+    const when = startsAt ? { date: startsAt.toLocaleDateString("en-GB", { timeZone, weekday: "short", day: "numeric", month: "short", year: "numeric" }), time: startsAt.toLocaleTimeString("en-GB", { timeZone, hour: "numeric", minute: "2-digit", hour12: true }) } : null;
     const chip = (label: string, onPress: () => void) => (
         <Pressable onPress={onPress} style={{ flex: 1, height: 48, borderRadius: 999, backgroundColor: colors.muted, alignItems: "center", justifyContent: "center" }}>
             <T color={when ? colors.foreground : colors.mutedForeground}>{label}</T>
@@ -607,7 +610,7 @@ export function EventTask({ eventId, onDone }: { eventId: string | null; onDone:
             )}
             <Input round value={name} onChangeText={setName} placeholder="Name (Rooftop Party)" />
             <View style={{ marginTop: 10 }}>
-                <T size={12} muted style={{ marginBottom: 4, paddingLeft: 20 }}>Starts (Lagos time)</T>
+                <T size={12} muted style={{ marginBottom: 4, paddingLeft: 20 }}>Starts ({zoneCity(timeZone)} time)</T>
                 <View style={{ flexDirection: "row", gap: 8 }}>
                     {chip(when?.date ?? "Date", () => setPicking("date"))}
                     {chip(when?.time ?? "Time", () => setPicking("time"))}
@@ -616,7 +619,7 @@ export function EventTask({ eventId, onDone }: { eventId: string | null; onDone:
                     <DateTimePicker
                         value={startsAt ?? suggested}
                         mode={picking}
-                        timeZoneName="Africa/Lagos"
+                        timeZoneName={timeZone}
                         display={Platform.OS === "ios" ? (picking === "date" ? "inline" : "spinner") : "default"}
                         minimumDate={eventId ? undefined : today}
                         onChange={(event, value) => {

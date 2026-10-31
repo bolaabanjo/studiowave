@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useBusinessTimeZone } from "@/lib/time-zone";
 import { Pressable, Share, View } from "react-native";
 import { Image } from "expo-image";
 import { router } from "expo-router";
@@ -80,6 +81,7 @@ const sameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.g
 
 /** Today's bookings and the next event in the coming two weeks. */
 export function UpNextSection() {
+    const timeZone = useBusinessTimeZone();
     const colors = useColors();
     const sales = useSales();
     const events = useEvents();
@@ -113,7 +115,7 @@ export function UpNextSection() {
                             : <IconCircle name="calendar" tone="violet" />}
                         <View style={{ flex: 1, minWidth: 0 }}>
                             <T weight="600" lines={1}>{event.event.name}</T>
-                            <T size={13} muted lines={1}>{eventWhen(event.event.starts_at)} · {event.sold} sold</T>
+                            <T size={13} muted lines={1}>{eventWhen(event.event.starts_at, timeZone)} · {event.sold} sold</T>
                         </View>
                         {chevron}
                     </Row>

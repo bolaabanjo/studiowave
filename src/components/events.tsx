@@ -1,4 +1,5 @@
 import { Pressable, View } from "react-native";
+import { useBusinessTimeZone } from "@/lib/time-zone";
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import Svg, { Defs, LinearGradient, RadialGradient, Rect, Stop } from "react-native-svg";
@@ -30,6 +31,7 @@ export function EventsList() {
  * gradient stands in.
  */
 function EventPoster({ summary }: { summary: StudioEventSummary }) {
+    const timeZone = useBusinessTimeZone();
     const { event } = summary;
     return (
         <Pressable onPress={() => router.push(`/event/${event.id}`)} style={({ pressed }) => ({ width: "48%", flexGrow: 1, maxWidth: "50%", overflow: "hidden", borderRadius: 16, backgroundColor: "#262626", opacity: past(summary) ? 0.6 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] })}>
@@ -58,7 +60,7 @@ function EventPoster({ summary }: { summary: StudioEventSummary }) {
             </View>
             <View style={{ paddingHorizontal: 12, paddingBottom: 12, paddingTop: 10 }}>
                 <T size={14} leading={17} lines={1} color="#ffffff">{event.name}</T>
-                <T size={12} lines={1} color="rgba(255,255,255,0.55)" style={{ marginTop: 2 }}>{eventWhen(event.starts_at)}</T>
+                <T size={12} lines={1} color="rgba(255,255,255,0.55)" style={{ marginTop: 2 }}>{eventWhen(event.starts_at, timeZone)}</T>
             </View>
         </Pressable>
     );

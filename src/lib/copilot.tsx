@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { deviceTimeZone } from "@/lib/time-zone";
 import * as Crypto from "expo-crypto";
 import { fetch } from "expo/fetch";
 import { useQueryClient } from "@tanstack/react-query";
@@ -216,6 +217,8 @@ export function CopilotProvider({ workspace, children }: { workspace: StudioWork
                     currentPath: "studio",
                     currentSurface: "Studio (the business owner's phone app)",
                     userName: workspace.user.firstName,
+                    // The phone's own time zone, so the employee's sense of "now" and "today" is the owner's wherever they are.
+                    timeZone: deviceTimeZone(),
                 }),
                 signal: controller.signal,
             });

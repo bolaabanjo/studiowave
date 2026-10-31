@@ -5,6 +5,7 @@ import { SITE_URL } from "@/lib/config";
 import { CopilotProvider } from "@/lib/copilot";
 import { useWorkspaceQuery, WorkspaceProvider } from "@/lib/workspace";
 import { usePushRegistration } from "@/lib/push";
+import { useAdoptTimeZone } from "@/lib/time-zone";
 import { useSession } from "@/lib/session";
 import { Button, LoadError, Spinner, T } from "@/ui/kit";
 import { useColors } from "@/ui/theme";
@@ -16,6 +17,7 @@ export default function AppLayout() {
     const { query, choose } = useWorkspaceQuery();
     const workspace = query.data?.workspace ?? null;
     usePushRegistration(workspace?.project.id ?? null);
+    useAdoptTimeZone(workspace?.project.id ?? null);
 
     if (query.isPending) return <Centered><Spinner /></Centered>;
     if (query.isError) return <Centered><LoadError error={query.error} fallback="Couldn't load your business." onRetry={() => void query.refetch()} /></Centered>;

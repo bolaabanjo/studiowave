@@ -1,4 +1,5 @@
 import { useRef, useState, type ReactNode } from "react";
+import { useBusinessTimeZone } from "@/lib/time-zone";
 import { Pressable, ScrollView, Share, TextInput, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Image } from "expo-image";
@@ -34,6 +35,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 
 /** One event: how it's selling, the link to share, the guest list, and check-in at the door (cencori components/studio/views/EventsView.tsx). */
 export default function Event() {
+    const timeZone = useBusinessTimeZone();
     const { id } = useLocalSearchParams<{ id: string }>();
     const colors = useColors();
     const insets = useSafeAreaInsets();
@@ -87,7 +89,7 @@ export default function Event() {
                         <T size={26} weight="600" leading={32} style={{ marginTop: 16, letterSpacing: -0.65 }}>{summary.event.name}</T>
                         <View style={{ marginTop: 16, gap: 10 }}>
                             {summary.event.venue ? <View style={{ flexDirection: "row", gap: 12 }}><View style={{ marginTop: 2 }}><Icon name="map-point:linear" size={20} color={colors.mutedForeground} /></View><T leading={24} style={{ flex: 1 }}>{summary.event.venue}</T></View> : null}
-                            <View style={{ flexDirection: "row", gap: 12 }}><View style={{ marginTop: 2 }}><Icon name="calendar:linear" size={20} color={colors.mutedForeground} /></View><T leading={24}>{eventWhen(summary.event.starts_at)}</T></View>
+                            <View style={{ flexDirection: "row", gap: 12 }}><View style={{ marginTop: 2 }}><Icon name="calendar:linear" size={20} color={colors.mutedForeground} /></View><T leading={24}>{eventWhen(summary.event.starts_at, timeZone)}</T></View>
                         </View>
 
                         <View style={{ marginTop: 24, flexDirection: "row", overflow: "hidden", borderRadius: 16, backgroundColor: card }}>

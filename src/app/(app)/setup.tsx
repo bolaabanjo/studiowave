@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { deviceTimeZone } from "@/lib/time-zone";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Share, TextInput, View, type ScrollViewInstance } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -162,13 +163,13 @@ export default function Setup() {
         try {
             const description = BUSINESS_KINDS.find((item) => item.id === businessKind)?.name ?? "";
             if (!partial) {
-                const created = await api<{ agent_id: string; version_id: string }>(studio, { method: "POST", body: { action: "create_agent", name: answers.name?.trim() || organization.name, description, instructions: setupInstructions(businessKind, answers), ...(businessKind === "restaurant" ? { template: "restaurant" } : {}) } });
+                const created = await api<{ agent_id: string; version_id: string }>(studio, { method: "POST", body: { action: "create_agent", name: answers.name?.trim() || organization.name, description, instructions: setupInstructions(businessKind, answers, deviceTimeZone()), ...(businessKind === "restaurant" ? { template: "restaurant" } : {}) } });
                 partial = { agentId: created.agent_id, versionId: created.version_id, done: [] };
                 const next = partial;
                 setState((s) => ({ ...s, partial: next }));
             } else if (!finished("published")) {
                 // They may have gone back and changed an answer since: the draft takes the latest, and needs testing again.
-                await api(studio, { method: "POST", body: { action: "save_draft", agent_id: partial.agentId, version_id: partial.versionId, name: answers.name?.trim() || organization.name, description, instructions: setupInstructions(businessKind, answers) } });
+                await api(studio, { method: "POST", body: { action: "save_draft", agent_id: partial.agentId, version_id: partial.versionId, name: answers.name?.trim() || organization.name, description, instructions: setupInstructions(businessKind, answers, deviceTimeZone()) } });
                 partial = { ...partial, done: partial.done.filter((step) => step !== "tested") };
                 const next = partial;
                 setState((s) => ({ ...s, partial: next }));
@@ -191,7 +192,7 @@ export default function Setup() {
                 mark("tools");
             }
             if (!finished("alerts")) {
-                if (user.email) await api(`${agentBase}/alerts`, { method: "PUT", body: { emails: [user.email], ...(businessKind === "restaurant" ? { time_zone: "Africa/Lagos" } : {}) } }).catch(() => undefined);
+                if (user.email) await api(`${agentBase}/alerts`, { method: "PUT", body: { emails: [user.email], ...(deviceTimeZone() ? { time_zone: deviceTimeZone() } : {}) } }).catch(() => undefined);
                 mark("alerts");
             }
             tick("Set it to tell you when someone needs you");
