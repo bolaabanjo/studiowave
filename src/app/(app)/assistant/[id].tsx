@@ -20,7 +20,10 @@ export default function AssistantDetail() {
     const colors = useColors();
     const insets = useSafeAreaInsets();
     const overview = useOverview(id);
-    const row = useAssistants().data?.assistants.find((item) => item.id === id) ?? null;
+    const staff = useAssistants().data?.assistants ?? [];
+    const row = staff.find((item) => item.id === id) ?? null;
+    // The main employee (live first, as the AI tab lists them) is the usual conversation: no ?agent.
+    const isMain = [...staff].sort((a, b) => Number(b.published && b.active) - Number(a.published && a.active))[0]?.id === id;
     const [renaming, setRenaming] = useState(false);
     const copilot = useCopilot();
     const [clearing, setClearing] = useState<"ask" | "busy" | "done" | null>(null);
@@ -55,7 +58,7 @@ export default function AssistantDetail() {
                         {profile.data ? <PersonalitySection agentId={id} profile={profile.data} /> : profile.isLoading ? <Skeleton height={260} radius={16} style={{ marginTop: 24 }} /> : null}
 
                         {/* Anything else is a conversation with them, on the AI tab. */}
-                        <Button kind="outline" title={`Talk to ${profile.data?.name ?? assistant.name}`} onPress={() => router.navigate("/assistant")} style={{ marginTop: 24 }} />
+                        <Button kind="outline" title={`Talk to ${profile.data?.name ?? assistant.name}`} onPress={() => router.navigate({ pathname: "/copilot", params: isMain ? {} : { agent: id } })} style={{ marginTop: 24 }} />
                         {/* One conversation that never resets; this starts it over. What they tell customers stays. */}
                         <Pressable
                             disabled={clearing === "busy" || clearing === "done"}
