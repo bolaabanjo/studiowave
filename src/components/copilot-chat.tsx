@@ -24,7 +24,7 @@ const SUGGESTIONS = [
 
 /**
  * Talking to your employee (cencori components/studio/StudioCopilot.tsx): the
- * AI tab, under its header. With ?ask=… it's sent straight away; "For Ada: "
+ * chat screen the AI tab opens, under its header. With ?ask=… it's sent straight away; "For Ada: "
  * goes in the box for the owner to finish.
  */
 export function CopilotChat({ inTab, header, name }: { inTab?: boolean; header?: ReactNode; name?: string | null }) {
@@ -42,7 +42,8 @@ export function CopilotChat({ inTab, header, name }: { inTab?: boolean; header?:
 
     // Each ?ask once: the tab stays mounted, so a later one (from Home or a staff page) comes in fresh.
     useEffect(() => {
-        if (!params.ask || asked.current === params.ask) return;
+        // After the conversation loads, so the question isn't lost under it.
+        if (!params.ask || asked.current === params.ask || !copilot.loaded) return;
         asked.current = params.ask;
         // eslint-disable-next-line react-hooks/set-state-in-effect -- a link's ?ask, taken in once
         if (params.ask.endsWith(": ")) setInput(params.ask);
@@ -65,7 +66,7 @@ export function CopilotChat({ inTab, header, name }: { inTab?: boolean; header?:
 
     return (
         <KeyboardSafe style={{ backgroundColor: colors.background }}>
-            {inTab ? <View style={{ paddingTop: insets.top }}>{header}</View> : (
+            {header ? <View style={{ paddingTop: insets.top }}>{header}</View> : (
                 <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: sheetTop }}>
                     <View style={{ width: 36 }} />
                     <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: alpha(colors.mutedForeground, 0.3) }} />
@@ -75,7 +76,9 @@ export function CopilotChat({ inTab, header, name }: { inTab?: boolean; header?:
                 </View>
             )}
             <ScrollView ref={scroll} onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: true })} style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16 }} keyboardShouldPersistTaps="handled">
-                {shown.length === 0 && !copilot.busy ? (
+                {!copilot.loaded && shown.length === 0 ? (
+                    <View style={{ paddingTop: 32, alignItems: "center" }}><Spinner /></View>
+                ) : shown.length === 0 && !copilot.busy ? (
                     <View style={{ paddingTop: 16 }}>
                         <T size={18} weight="600">{name ? `Hi, I'm ${name}` : "Let's set up your employee"}</T>
                         <T size={14} leading={24} muted style={{ marginTop: 4 }}>{name ? `Tell ${name} like you'd tell a member of staff. What you teach it, it tells your customers.` : "Tell me about your business and I'll start answering your customers."}</T>
@@ -89,17 +92,34 @@ export function CopilotChat({ inTab, header, name }: { inTab?: boolean; header?:
                     </View>
                 ) : (
                     <View style={{ gap: 12, paddingTop: 16 }}>
-                        {shown.map((message) => message.role === "user" ? (
-                            <View key={message.id} style={{ maxWidth: "85%", alignSelf: "flex-end", borderRadius: 16, borderBottomRightRadius: 6, backgroundColor: colors.foreground, paddingHorizontal: 16, paddingVertical: 10 }}>
-                                <T leading={24} color={colors.background}>{message.content}</T>
-                            </View>
-                        ) : (
-                            <View key={message.id}>
-                                {message.content ? <Markdown content={message.content} /> : null}
-                                {message.actions?.map((action) => <ActionStep key={action.id} action={action} />)}
-                                {message.notes?.map((note) => <SavedNote key={note.id} note={note} onUpdate={(patch) => copilot.updateNote(message.id, note.id, patch)} />)}
-                            </View>
-                        ))}
+                        {shown.map((message, index) => {
+                            // A divider where the day changes: one conversation that carries on across days.
+                            const day = message.at ? dayLabel(message.at) : null;
+                            const previous = index > 0 && shown[index - 1].at ? dayLabel(shown[index - 1].at!) : null;
+                            const divider = day && day !== previous ? <T key={`${message.id}:day`} size={12} muted center style={{ marginTop: index ? 12 : 0 }}>{day}</T> : null;
+                            const time = message.at ? <T size={11} muted style={{ marginTop: 4, ...(message.role === "user" ? { textAlign: "right" as const } : null) }}>{timeLabel(message.at)}</T> : null;
+                            return message.role === "user" ? (
+                                <View key={message.id} style={{ gap: 12 }}>
+                                    {divider}
+                                    <View style={{ alignSelf: "flex-end", maxWidth: "85%" }}>
+                                        <View style={{ borderRadius: 16, borderBottomRightRadius: 6, backgroundColor: colors.foreground, paddingHorizontal: 16, paddingVertical: 7 }}>
+                                            <T leading={24} color={colors.background}>{message.content}</T>
+                                        </View>
+                                        {time}
+                                    </View>
+                                </View>
+                            ) : (
+                                <View key={message.id} style={{ gap: 12 }}>
+                                    {divider}
+                                    <View>
+                                        {message.content ? <Markdown content={message.content} /> : null}
+                                        {message.actions?.map((action) => <ActionStep key={action.id} action={action} />)}
+                                        {message.notes?.map((note) => <SavedNote key={note.id} note={note} onUpdate={(patch) => copilot.updateNote(message.id, note.id, patch)} />)}
+                                        {time}
+                                    </View>
+                                </View>
+                            );
+                        })}
                         {copilot.streaming ? <Markdown content={copilot.streaming} /> : null}
                         {copilot.busy && !copilot.streaming ? <Thinking label={copilot.status} /> : null}
                     </View>
@@ -143,6 +163,22 @@ export function CopilotChat({ inTab, header, name }: { inTab?: boolean; header?:
             </View>
         </KeyboardSafe>
     );
+}
+
+/** "Today", "Yesterday", "Friday" within the week, else "Fri 24 Oct", in the phone's time zone. */
+function dayLabel(at: string): string {
+    const date = new Date(at);
+    const startOf = (value: Date) => new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime();
+    const days = Math.round((startOf(new Date()) - startOf(date)) / 86_400_000);
+    if (days === 0) return "Today";
+    if (days === 1) return "Yesterday";
+    if (days > 1 && days < 7) return date.toLocaleDateString("en-GB", { weekday: "long" });
+    return date.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", ...(date.getFullYear() !== new Date().getFullYear() ? { year: "numeric" as const } : null) });
+}
+
+/** "2:05 pm". */
+function timeLabel(at: string): string {
+    return new Date(at).toLocaleTimeString("en-GB", { hour: "numeric", minute: "2-digit", hour12: true }).replace(/\s?([ap])\.?m\.?$/i, " $1m").toLowerCase();
 }
 
 /** The shimmering "Thinking" line while a reply hasn't started. */

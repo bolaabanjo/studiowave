@@ -42,7 +42,7 @@ export default function AppLayout() {
                     <Stack.Screen name="(tabs)" />
                     <Stack.Screen name="conversation/[id]" />
                     <Stack.Screen name="assistant/[id]" />
-                    <Stack.Screen name="staff" />
+                    <Stack.Screen name="copilot" />
                     <Stack.Screen name="event/[id]" />
                     <Stack.Screen name="setup" options={{ presentation: "fullScreenModal" }} />
                     <Stack.Screen name="profile" options={sheet} />

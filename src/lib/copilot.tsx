@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import * as Crypto from "expo-crypto";
 import { fetch } from "expo/fetch";
 import { useQueryClient } from "@tanstack/react-query";
@@ -8,10 +8,11 @@ import { taskForCopilotPage } from "@/lib/tasks";
 import type { StudioWorkspace } from "@/lib/types";
 
 /**
- * Copilot in Studio (cencori components/studio/StudioCopilot.tsx): how an
- * owner changes anything by asking. The same assistant as the console's
- * (/api/agent), with the same confirm-before-change actions. The chat lasts
- * while the app is open; the sheet (src/app/(app)/copilot.tsx) shows it.
+ * The owner's conversation with their employee (cencori /api/agent, as the
+ * console's Copilot, with its confirm-before-change actions). One thread that
+ * never resets, kept on the server with each message's time (cencori
+ * lib/studio/owner-chat.ts): loaded when the app opens, and each new message
+ * is sent alone, the server adding the history. The AI tab shows it.
  */
 
 export type CopilotActionState = "pending" | "running" | "done" | "failed" | "cancelled" | "expired";
@@ -34,7 +35,7 @@ export type CopilotAction = {
 /** Something the owner told their employee, saved straight away (cencori lib/copilot/remember.ts); Undo deletes it. */
 export type CopilotNote = { id: string; fact: string; agent_id: string; agent_name: string; state: "saved" | "undoing" | "undone" | "failed" };
 
-export type CopilotMessage = { id: string; role: "user" | "assistant"; content: string; actions?: CopilotAction[]; notes?: CopilotNote[]; hidden?: boolean };
+export type CopilotMessage = { id: string; role: "user" | "assistant"; content: string; at?: string; actions?: CopilotAction[]; notes?: CopilotNote[]; hidden?: boolean };
 
 export const isOpenAction = (action: CopilotAction) => action.state === "pending" || action.state === "running";
 
@@ -93,6 +94,17 @@ interface CopilotValue {
     stop: () => void;
     updateAction: (messageId: string, actionId: string, patch: Partial<CopilotAction>) => void;
     updateNote: (messageId: string, noteId: string, patch: Partial<CopilotNote>) => void;
+    /** Whether the saved conversation has loaded. */
+    loaded: boolean;
+    /** Start over: the employee forgets the conversation (not what it tells customers). */
+    clear: () => Promise<void>;
+    /**
+     * Who the owner is talking to: an employee's agent id, once the server has
+     * confirmed it keeps that employee's own thread. null is the main employee.
+     */
+    employeeId: string | null;
+    /** Talk to this employee (null: the main one). Their own conversation loads in. */
+    chooseEmployee: (agentId: string | null) => void;
 }
 
 const CopilotContext = createContext<CopilotValue | null>(null);
@@ -103,6 +115,26 @@ export function useCopilot(): CopilotValue {
     return value;
 }
 
+/** A page to set something up (WhatsApp, payments…) opens as a Studio sheet; other console links open in the browser. */
+function withLink(action: CopilotAction): CopilotAction {
+    const link = action.kind === "open_agent_page"
+        ? { href: `studio-task:${taskForCopilotPage(action.title)}`, label: action.title, sameTab: true }
+        : action.link && action.link.href.startsWith("/")
+            ? { ...action.link, href: `https://console.cencori.com${action.link.href}` }
+            : action.link;
+    return { ...action, ...(link ? { link } : {}) };
+}
+
+type StoredMessage = Omit<CopilotMessage, "actions"> & { actions?: { id: string; title: string; state: CopilotActionState; result?: string; proposal: CopilotAction }[] };
+
+/** A message from the saved thread. A card still waiting from an earlier visit can't be confirmed now: it shows as not confirmed. */
+function fromStored(message: StoredMessage): CopilotMessage {
+    return {
+        ...message,
+        actions: message.actions?.map((stored) => withLink({ ...stored.proposal, state: isOpenAction({ state: stored.state } as CopilotAction) ? "expired" : stored.state, ...(stored.result ? { result: stored.result } : {}) })),
+    };
+}
+
 export function CopilotProvider({ workspace, children }: { workspace: StudioWorkspace; children: ReactNode }) {
     const queryClient = useQueryClient();
     const { token } = useSession();
@@ -111,10 +143,47 @@ export function CopilotProvider({ workspace, children }: { workspace: StudioWork
     const [status, setStatus] = useState("Thinking");
     const [busy, setBusy] = useState(false);
     const [secret, setSecret] = useState<{ title: string; secret: string } | null>(null);
+    const [loaded, setLoaded] = useState(false);
+    // Asked for, and confirmed: a server that keeps one thread per employee says back whose
+    // thread it sent. One that doesn't (yet) sends the main thread, and the app stays on the main employee.
+    const [requested, setRequested] = useState<string | null>(null);
+    const [employeeId, setEmployeeId] = useState<string | null>(null);
     const conversationId = useRef(Crypto.randomUUID());
     const abort = useRef<AbortController | null>(null);
     const messagesRef = useRef(messages);
     messagesRef.current = messages;
+    const projectId = workspace.project.id;
+    const authed = useCallback((init?: RequestInit) => ({ ...init, credentials: "omit" as const, headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(init?.headers ?? {}) } }), [token]);
+
+    const agentQuery = employeeId ? `&agent_id=${employeeId}` : "";
+
+    // The conversation so far with this employee, from the server.
+    useEffect(() => {
+        let cancelled = false;
+        void fetch(`${API_URL}/api/studio/employee/chat?project_id=${projectId}${requested ? `&agent_id=${requested}` : ""}`, authed())
+            .then((response) => (response.ok ? response.json() : null))
+            .then((body: { messages?: StoredMessage[]; agent_id?: string | null } | null) => {
+                if (cancelled) return;
+                setEmployeeId(requested && body?.agent_id === requested ? requested : null);
+                setMessages(body?.messages ? body.messages.map(fromStored) : []);
+            })
+            .catch(() => undefined)
+            .finally(() => { if (!cancelled) setLoaded(true); });
+        return () => { cancelled = true; };
+    }, [projectId, authed, requested]);
+
+    const chooseEmployee = useCallback((agentId: string | null) => {
+        if (agentId === requested) return;
+        abort.current?.abort();
+        setMessages([]);
+        setLoaded(false);
+        setRequested(agentId);
+    }, [requested]);
+
+    /** Keep how an action or a saved fact ended, so it shows that way next time. */
+    const remember = useCallback((change: { message_id: string; action_id?: string; note_id?: string; state: string; result?: string }) => {
+        void fetch(`${API_URL}/api/studio/employee/chat`, authed({ method: "PATCH", body: JSON.stringify({ project_id: projectId, ...(employeeId ? { agent_id: employeeId } : {}), ...change }) })).catch(() => undefined);
+    }, [authed, projectId, employeeId]);
 
     const run = useCallback(async (next: CopilotMessage[]) => {
         setMessages(next);
@@ -126,22 +195,21 @@ export function CopilotProvider({ workspace, children }: { workspace: StudioWork
         let content = "";
         const proposed: CopilotAction[] = [];
         const notes: CopilotNote[] = [];
+        let replyId: string = Crypto.randomUUID();
         try {
             const response = await fetch(`${API_URL}/api/agent`, {
                 method: "POST",
                 credentials: "omit",
                 headers: { "Content-Type": "application/json", Accept: "text/event-stream", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
                 body: JSON.stringify({
-                    messages: next.map((message) => ({
-                        role: message.role,
-                        content: [
-                            message.content,
-                            ...(message.actions ?? []).map((action) => `[${action.title}: ${action.state}${action.result ? ` — ${action.result}` : ""}]`),
-                            // What it saved for customers, and whether the owner undid it since.
-                            ...(message.notes ?? []).map((note) => `[Saved for customers (${note.agent_name}): "${note.fact}"${note.state === "undone" ? " — the owner undid this, so it's no longer told to customers" : ""}]`),
-                        ].filter(Boolean).join("\n"),
-                    })),
+                    // Only the newest: the server keeps the conversation and adds it, with every message's time.
+                    messages: [{ role: "user", content: next[next.length - 1].content }],
+                    thread: true,
+                    messageId: next[next.length - 1].id,
+                    hidden: next[next.length - 1].hidden === true,
                     projectId: workspace.project.id,
+                    // Which employee answers, and whose thread this goes in (absent: the main one).
+                    ...(employeeId ? { agentId: employeeId } : {}),
                     organizationId: workspace.organization.id,
                     conversationId: conversationId.current,
                     environment: "production",
@@ -167,7 +235,7 @@ export function CopilotProvider({ workspace, children }: { workspace: StudioWork
                 for (const chunk of chunks) {
                     const line = chunk.split("\n").find((item) => item.startsWith("data: "));
                     if (!line || line === "data: [DONE]") continue;
-                    const payload = JSON.parse(line.slice(6)) as { content?: string; status?: string; discard?: boolean; error?: string; action?: CopilotAction; remembered?: Omit<CopilotNote, "state"> };
+                    const payload = JSON.parse(line.slice(6)) as { content?: string; status?: string; discard?: boolean; error?: string; action?: CopilotAction; remembered?: Omit<CopilotNote, "state">; message_id?: string };
                     if (payload.error) throw new Error(payload.error);
                     if (payload.status) setStatus(payload.status);
                     if (payload.discard) {
@@ -178,19 +246,13 @@ export function CopilotProvider({ workspace, children }: { workspace: StudioWork
                         content += payload.content;
                         setStreaming(content);
                     }
+                    // The reply's id in the saved thread, so its actions and notes can be updated there.
+                    if (payload.message_id) replyId = payload.message_id;
                     if (payload.remembered) notes.push({ ...payload.remembered, state: "saved" });
-                    if (payload.action) {
-                        // A page to set something up (WhatsApp, payments…) opens as a Studio sheet; other console links open in the browser.
-                        const link = payload.action.kind === "open_agent_page"
-                            ? { href: `studio-task:${taskForCopilotPage(payload.action.title)}`, label: payload.action.title, sameTab: true }
-                            : payload.action.link && payload.action.link.href.startsWith("/")
-                                ? { ...payload.action.link, href: `https://console.cencori.com${payload.action.link.href}` }
-                                : payload.action.link;
-                        proposed.push({ ...payload.action, ...(link ? { link } : {}), state: "pending" });
-                    }
+                    if (payload.action) proposed.push(withLink({ ...payload.action, state: "pending" }));
                 }
             }
-            setMessages([...next, { id: Crypto.randomUUID(), role: "assistant", content, ...(proposed.length ? { actions: proposed } : {}), ...(notes.length ? { notes } : {}) }]);
+            setMessages([...next, { id: replyId, role: "assistant", content, at: new Date().toISOString(), ...(proposed.length ? { actions: proposed } : {}), ...(notes.length ? { notes } : {}) }]);
         } catch (error) {
             if ((error as Error).name !== "AbortError") setMessages([...next, { id: Crypto.randomUUID(), role: "assistant", content: (error as Error).message }]);
         } finally {
@@ -198,14 +260,14 @@ export function CopilotProvider({ workspace, children }: { workspace: StudioWork
             setBusy(false);
             abort.current = null;
         }
-    }, [workspace, token]);
+    }, [workspace, token, employeeId]);
 
     const send = useCallback((text: string) => {
         const content = text.trim();
         if (!content || busy) return;
         // Moving on without answering a confirmation leaves it unconfirmed.
         const settled = messagesRef.current.map((message) => (message.actions?.some(isOpenAction) ? { ...message, actions: message.actions.map((action) => (isOpenAction(action) ? { ...action, state: "expired" as const } : action)) } : message));
-        void run([...settled, { id: Crypto.randomUUID(), role: "user", content }]);
+        void run([...settled, { id: Crypto.randomUUID(), role: "user", content, at: new Date().toISOString() }]);
     }, [busy, run]);
 
     const updateAction = useCallback((messageId: string, actionId: string, patch: Partial<CopilotAction>) => {
@@ -213,11 +275,12 @@ export function CopilotProvider({ workspace, children }: { workspace: StudioWork
         messagesRef.current = next;
         setMessages(next);
         if (patch.state === "done") void queryClient.invalidateQueries();
+        if (patch.state && patch.state !== "running") remember({ message_id: messageId, action_id: actionId, state: patch.state, ...(patch.result ? { result: patch.result } : {}) });
         if (patch.state === "done" || patch.state === "failed" || patch.state === "cancelled") {
             const action = next.find((message) => message.id === messageId)?.actions?.find((item) => item.id === actionId);
-            if (action) void run([...next, { id: Crypto.randomUUID(), role: "user", content: actionOutcomeNote(action), hidden: true }]);
+            if (action) void run([...next, { id: Crypto.randomUUID(), role: "user", content: actionOutcomeNote(action), hidden: true, at: new Date().toISOString() }]);
         }
-    }, [queryClient, run]);
+    }, [queryClient, run, remember]);
 
     // An Undo on something saved: no new turn, the next message carries it (see the request body).
     const updateNote = useCallback((messageId: string, noteId: string, patch: Partial<CopilotNote>) => {
@@ -225,10 +288,17 @@ export function CopilotProvider({ workspace, children }: { workspace: StudioWork
         messagesRef.current = next;
         setMessages(next);
         if (patch.state === "undone") void queryClient.invalidateQueries({ queryKey: ["overview"] });
-    }, [queryClient]);
+        if (patch.state === "undone" || patch.state === "saved") remember({ message_id: messageId, note_id: noteId, state: patch.state });
+    }, [queryClient, remember]);
+
+    const clear = useCallback(async () => {
+        abort.current?.abort();
+        await fetch(`${API_URL}/api/studio/employee/chat?project_id=${projectId}${agentQuery}`, authed({ method: "DELETE" }));
+        setMessages([]);
+    }, [authed, projectId, agentQuery]);
 
     return (
-        <CopilotContext.Provider value={{ messages, streaming, status, busy, secret, setSecret, send, stop: () => abort.current?.abort(), updateAction, updateNote }}>
+        <CopilotContext.Provider value={{ messages, streaming, status, busy, secret, setSecret, send, stop: () => abort.current?.abort(), updateAction, updateNote, loaded, clear, employeeId, chooseEmployee }}>
             {children}
         </CopilotContext.Provider>
     );
