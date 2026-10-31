@@ -176,3 +176,40 @@ export function useRefreshMoney() {
         for (const key of ["money", "sales", "overview", "inbox"]) void queryClient.invalidateQueries({ queryKey: [key, projectId] });
     };
 }
+
+export type EmployeeTone = "warm" | "professional" | "playful" | "direct";
+export type EmployeeLanguage = "customer" | "english" | "pidgin" | "yoruba" | "igbo" | "hausa" | "french";
+export type EmployeeProfile = {
+    name: string;
+    tone: EmployeeTone;
+    style: string;
+    language: EmployeeLanguage;
+    emoji: boolean;
+    choices: { tones: { id: EmployeeTone; label: string; description: string }[]; languages: { id: EmployeeLanguage; label: string }[] };
+};
+
+/** An employee's name and personality (cencori app/api/studio/employee). */
+export function useEmployee(agentId: string) {
+    const api = useApi();
+    const projectId = useProjectId();
+    return useQuery({
+        queryKey: ["employee", projectId, agentId],
+        queryFn: () => api<EmployeeProfile>(`/api/studio/employee?project_id=${projectId}&agent_id=${agentId}`, { fallback: "Couldn't load this employee." }),
+    });
+}
+
+/** Rename an employee or change its personality: live on the next customer message. The new name shows everywhere at once. */
+export function useSaveEmployee(agentId: string) {
+    const api = useApi();
+    const projectId = useProjectId();
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (change: Partial<Pick<EmployeeProfile, "name" | "tone" | "style" | "language" | "emoji">>) =>
+            api<EmployeeProfile>("/api/studio/employee", { method: "POST", body: { project_id: projectId, agent_id: agentId, ...change }, fallback: "Couldn't save that." }),
+        onSuccess: (profile) => {
+            queryClient.setQueryData(["employee", projectId, agentId], profile);
+            void queryClient.invalidateQueries({ queryKey: ["assistants", projectId] });
+            void queryClient.invalidateQueries({ queryKey: ["overview", projectId] });
+        },
+    });
+}

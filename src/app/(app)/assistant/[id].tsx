@@ -6,13 +6,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { WebView } from "react-native-webview";
 import { useApi } from "@/lib/api";
 import { SITE_URL } from "@/lib/config";
-import { useAssistants, useOverview, useSetAssistantActive } from "@/lib/queries";
+import { useAssistants, useEmployee, useOverview, useSetAssistantActive } from "@/lib/queries";
 import { useWorkspace } from "@/lib/workspace";
 import { useTasks } from "@/lib/tasks";
 import type { StudioAssistantSummary } from "@/lib/types";
 import { assistantStatus } from "@/components/assistant-status";
+import { PersonalitySection, RenameSheet } from "@/components/personality";
 import { Icon } from "@/ui/icons";
-import { Button, ErrorText, IconButton, LoadError, Sheet, SheetHeader, Skeleton, Spinner, T, Tag } from "@/ui/kit";
+import { AgentOrb, Button, ErrorText, IconButton, LoadError, Sheet, SheetHeader, Skeleton, Spinner, T, Tag } from "@/ui/kit";
 import { alpha, palette, useColors } from "@/ui/theme";
 
 /** What each ability is called for an owner. */
@@ -63,7 +64,11 @@ function Line({ label, detail, right, onPress }: { label: string; detail?: strin
     return onPress ? <Pressable onPress={onPress} style={({ pressed }) => [style, pressed && { backgroundColor: colors.muted }]}>{inner}</Pressable> : <View style={style}>{inner}</View>;
 }
 
-/** One assistant: try it, switch it on or off, where it answers, what it knows and can do (cencori components/studio/views/AssistantDetailView.tsx). */
+/**
+ * An employee's profile: who they are (name, personality: both editable, live
+ * at once), try them, switch them on or off, where they work, what they know
+ * and can do (cencori components/studio/views/AssistantDetailView.tsx).
+ */
 export default function AssistantDetail() {
     const { id } = useLocalSearchParams<{ id: string }>();
     const colors = useColors();
@@ -76,6 +81,8 @@ export default function AssistantDetail() {
     const row = useAssistants().data?.assistants.find((item) => item.id === id) ?? null;
     const setActive = useSetAssistantActive();
     const [tryOpen, setTryOpen] = useState(false);
+    const [renaming, setRenaming] = useState(false);
+    const profile = useEmployee(id);
     const [removing, setRemoving] = useState<string | null>(null);
     const assistant = overview.data?.assistant ?? null;
     const linkUrl = overview.data?.share_token ? `${SITE_URL}/talk/${overview.data.share_token}` : null;
@@ -99,7 +106,7 @@ export default function AssistantDetail() {
     return (
         <View style={{ flex: 1, backgroundColor: colors.background }}>
             <View style={{ paddingTop: insets.top + 12, paddingHorizontal: 16 }}>
-                <View style={{ height: 40, justifyContent: "center", marginLeft: -8 }}><IconButton name="chevron-left:lucide" label="Back to Assistants" onPress={() => router.back()} /></View>
+                <View style={{ height: 40, justifyContent: "center", marginLeft: -8 }}><IconButton name="chevron-left:lucide" label="Back" onPress={() => router.back()} /></View>
             </View>
             <ScrollPage>
                 {overview.isLoading ? (
@@ -108,9 +115,14 @@ export default function AssistantDetail() {
                     <LoadError error={overview.error} fallback="Couldn't load this employee." onRetry={() => void overview.refetch()} />
                 ) : (
                     <>
-                        <View style={{ marginTop: 8, flexDirection: "row", alignItems: "center", gap: 8 }}>
-                            <T size={26} weight="600" leading={32} lines={1} style={{ flexShrink: 1, letterSpacing: -0.65 }}>{assistant.name}</T>
-                            {status ? <Tag tone={status.tone} label={status.label} style={{ alignSelf: "center" }} /> : null}
+                        {/* Who they are: the orb, the name (tap to rename) and how they're doing. */}
+                        <View style={{ marginTop: 4, alignItems: "center" }}>
+                            <AgentOrb seed={id} size={88} />
+                            <Pressable onPress={() => setRenaming(true)} accessibilityLabel={`Rename ${profile.data?.name ?? assistant.name}`} style={{ marginTop: 12, flexDirection: "row", alignItems: "center", gap: 8, maxWidth: "100%" }}>
+                                <T size={26} weight="600" leading={32} lines={1} style={{ flexShrink: 1, letterSpacing: -0.65 }}>{profile.data?.name ?? assistant.name}</T>
+                                <Icon name="pen" size={18} color={colors.mutedForeground} />
+                            </Pressable>
+                            {status ? <Tag tone={status.tone} label={status.label} style={{ marginTop: 8, alignSelf: "center" }} /> : null}
                         </View>
 
                         <View style={{ marginTop: 16, flexDirection: "row", alignItems: "center", gap: 8 }}>
@@ -123,7 +135,7 @@ export default function AssistantDetail() {
                                     onPress={() => setActive.mutate({ agentId: id, active: !row.active })}
                                     style={{ height: 48, flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 999, borderWidth: 1, borderColor: alpha(colors.border, 0.6), paddingLeft: 16, paddingRight: 6, opacity: setActive.isPending ? 0.6 : 1 }}
                                 >
-                                    <T>{row.active ? "Live" : "Paused"}</T>
+                                    <T>{row.active ? "Online" : "Paused"}</T>
                                     <View style={{ width: 48, height: 28, borderRadius: 14, padding: 2, justifyContent: "center", backgroundColor: row.active ? palette.emerald600 : alpha(colors.mutedForeground, 0.3) }}>
                                         <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: "#ffffff", transform: [{ translateX: row.active ? 20 : 0 }], shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 2, shadowOffset: { width: 0, height: 1 } }} />
                                     </View>
@@ -133,6 +145,8 @@ export default function AssistantDetail() {
                             )}
                         </View>
                         {setActive.error ? <ErrorText style={{ marginTop: 8 }}>{setActive.error.message}</ErrorText> : null}
+
+                        {profile.data ? <PersonalitySection agentId={id} profile={profile.data} /> : profile.isLoading ? <Skeleton height={260} radius={16} style={{ marginTop: 24 }} /> : null}
 
                         <Section title="Where it answers">
                             <Line
@@ -182,7 +196,9 @@ export default function AssistantDetail() {
                             <Line label="Chats" right={<T weight="600">{String(row?.chats_this_week ?? 0)}</T>} />
                         </Section>
 
-                        <Button kind="outline" title={`Tell ${assistant.name} what to change`} onPress={() => ask(`For ${assistant.name}: `)} style={{ marginTop: 24 }} />
+                        {/* Anything else is a conversation with them, on the AI tab. */}
+                        <Button kind="outline" title={`Talk to ${profile.data?.name ?? assistant.name}`} onPress={() => router.navigate("/assistant")} style={{ marginTop: 24 }} />
+                        <RenameSheet key={profile.data?.name ?? assistant.name} agentId={id} name={profile.data?.name ?? assistant.name} open={renaming} onClose={() => setRenaming(false)} />
                         <TrySheet agentId={id} name={assistant.name} open={tryOpen} onClose={() => setTryOpen(false)} />
                     </>
                 )}

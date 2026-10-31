@@ -42,8 +42,8 @@ export default function Staff() {
                                 <AgentOrb seed={assistant.id} size={44} />
                                 <View style={{ flex: 1, minWidth: 0 }}>
                                     <T weight="600" lines={1}>{assistant.name}</T>
-                                    {/* Live is the normal state, so it goes unsaid; Paused or Not live yet is worth seeing. */}
-                                    {status.label !== "Live" ? (
+                                    {/* Online is the normal state, so it goes unsaid; Paused or Not online yet is worth seeing. */}
+                                    {status.label !== "Online" ? (
                                         <View style={{ marginTop: 2, flexDirection: "row", alignItems: "center", gap: 6 }}>
                                             <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: status.dot }} />
                                             <T size={13} muted>{status.label}</T>
