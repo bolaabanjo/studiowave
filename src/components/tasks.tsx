@@ -115,6 +115,9 @@ type WhatsAppState = { channel: { display_phone_number?: string | null } | null;
 /**
  * Connect WhatsApp: Meta's own signup in the phone's browser, coming back to
  * the app to finish (cencori app/api/studio/whatsapp/start, finish), or Kapso's.
+ * Either way the owner chooses: keep their WhatsApp Business app number
+ * (shared), or give the employee a number of its own (a new SIM that isn't on
+ * WhatsApp, answered from Studio).
  */
 export function WhatsAppTask({ agentBase, agentId, onDone }: { agentBase: string; agentId: string; onDone: () => void }) {
     const api = useApi();
@@ -147,7 +150,7 @@ export function WhatsAppTask({ agentBase, agentId, onDone }: { agentBase: string
         setBusy(true);
         setError(null);
         try {
-            const { url } = await api<{ url: string }>(`${agentBase}/whatsapp`, { method: "POST", body: { action: "kapso_link", return_path: "/" } });
+            const { url } = await api<{ url: string }>(`${agentBase}/whatsapp`, { method: "POST", body: { action: "kapso_link", return_path: "/", own_number: !keepApp } });
             await WebBrowser.openBrowserAsync(url);
             await load();
         } catch (cause) {
@@ -166,19 +169,30 @@ export function WhatsAppTask({ agentBase, agentId, onDone }: { agentBase: string
             </View>
         );
     }
+    const choice = (
+        <ToggleRow
+            title="Keep the WhatsApp Business app"
+            detail={keepApp
+                ? "Same number. You can still reply from your phone."
+                : "Off: your employee gets its own number. Use a new SIM that has never been on WhatsApp; you'll reply to customers from Studio, not the WhatsApp app."}
+            on={keepApp}
+            onPress={() => setKeepApp((value) => !value)}
+        />
+    );
     if (!state.signup) {
         return (
             <>
+                {choice}
                 <ErrorLine error={error} />
-                <Primary title="Connect WhatsApp" busy={busy} disabled={!state.kapso} onPress={() => void withKapso()} />
+                <Primary title={keepApp ? "Connect WhatsApp" : "Connect its own number"} busy={busy} disabled={!state.kapso} onPress={() => void withKapso()} />
             </>
         );
     }
     return (
         <>
-            <ToggleRow title="Keep the WhatsApp Business app" detail="Same number. You can still reply from your phone." on={keepApp} onPress={() => setKeepApp((value) => !value)} />
+            {choice}
             <ErrorLine error={error} />
-            <Primary title="Connect WhatsApp" busy={busy} onPress={() => void withMeta()} />
+            <Primary title={keepApp ? "Connect WhatsApp" : "Connect its own number"} busy={busy} onPress={() => void withMeta()} />
             {state.kapso ? <Pressable disabled={busy} onPress={() => void withKapso()} style={{ marginTop: 16 }}><T size={13} muted center>Other way to connect</T></Pressable> : null}
         </>
     );
