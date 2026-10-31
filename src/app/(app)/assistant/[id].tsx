@@ -80,7 +80,8 @@ export default function AssistantDetail() {
     const assistant = overview.data?.assistant ?? null;
     const linkUrl = overview.data?.share_token ? `${SITE_URL}/talk/${overview.data.share_token}` : null;
     const status = row ? assistantStatus(row, colors) : null;
-    const ask = (message: string) => router.push({ pathname: "/copilot", params: { ask: message } });
+    // Changes are asked for in the chat with your employee, on the AI tab.
+    const ask = (message: string) => router.navigate({ pathname: "/assistant", params: { ask: message } });
     const check = <Icon name="check:lucide" size={16} color={palette.emerald600} />;
 
     const removeKnowledge = async (sourceId: string) => {
@@ -104,7 +105,7 @@ export default function AssistantDetail() {
                 {overview.isLoading ? (
                     <View style={{ marginTop: 12, gap: 12 }}><Skeleton width={192} height={32} /><Skeleton height={48} radius={24} />{[0, 1, 2].map((index) => <Skeleton key={index} height={112} radius={16} />)}</View>
                 ) : !assistant ? (
-                    <LoadError error={overview.error} fallback="Couldn't load this assistant." onRetry={() => void overview.refetch()} />
+                    <LoadError error={overview.error} fallback="Couldn't load this employee." onRetry={() => void overview.refetch()} />
                 ) : (
                     <>
                         <View style={{ marginTop: 8, flexDirection: "row", alignItems: "center", gap: 8 }}>
@@ -181,7 +182,7 @@ export default function AssistantDetail() {
                             <Line label="Chats" right={<T weight="600">{String(row?.chats_this_week ?? 0)}</T>} />
                         </Section>
 
-                        <Button kind="outline" title="Change something with Copilot" onPress={() => ask(`For ${assistant.name}: `)} style={{ marginTop: 24 }} />
+                        <Button kind="outline" title={`Tell ${assistant.name} what to change`} onPress={() => ask(`For ${assistant.name}: `)} style={{ marginTop: 24 }} />
                         <TrySheet agentId={id} name={assistant.name} open={tryOpen} onClose={() => setTryOpen(false)} />
                     </>
                 )}

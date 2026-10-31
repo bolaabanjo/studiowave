@@ -158,7 +158,7 @@ export default function Setup() {
             const next = partial;
             setState((s) => ({ ...s, partial: next }));
         };
-        let stage = "creating your assistant";
+        let stage = "creating your employee";
         try {
             const description = BUSINESS_KINDS.find((item) => item.id === businessKind)?.name ?? "";
             if (!partial) {
@@ -174,7 +174,7 @@ export default function Setup() {
                 setState((s) => ({ ...s, partial: next }));
             }
             const { agentId, versionId } = partial;
-            tick("Created your assistant");
+            tick("Created your employee");
             const knowledge = setupKnowledge(businessKind, answers);
             const agentBase = `/api/projects/${project.id}/embedded-agents/${agentId}`;
             if (knowledge) {
@@ -216,7 +216,7 @@ export default function Setup() {
             // The half-built assistant is gone (deleted in the console, say): the next try starts over.
             if (cause instanceof Error && /not found/i.test(cause.message)) setState((s) => ({ ...s, partial: null }));
             const reason = cause instanceof Error && cause.message ? ` ${cause.message.replace(/\.?$/, ".")}` : "";
-            setError(`We couldn't finish setting up your assistant (stopped at ${stage}).${reason} Try again, and if it keeps happening, email support@cencori.com.`);
+            setError(`We couldn't finish setting up your employee (stopped at ${stage}).${reason} Try again, and if it keeps happening, email support@cencori.com.`);
             setBuilding(null);
         }
     };
@@ -302,7 +302,7 @@ export default function Setup() {
                         ))}
                         {building ? (
                             <View style={{ borderRadius: 16, borderWidth: 1, borderColor: alpha(colors.border, 0.6), paddingHorizontal: 16, paddingVertical: 14 }}>
-                                <T weight="600">Setting up your assistant…</T>
+                                <T weight="600">Setting up your employee…</T>
                                 <View style={{ marginTop: 8, gap: 6 }}>
                                     {building.map((line) => <View key={line} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}><Icon name="check:lucide" size={16} color={palette.emerald600} /><T size={14}>{line}</T></View>)}
                                     <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}><Spinner /><T size={14} muted>Working…</T></View>
@@ -362,7 +362,7 @@ export default function Setup() {
             {state.step === 1 ? (
                 <>
                     <Title size={28} top={32}>What kind of business do you run?</Title>
-                    <T leading={24} muted style={{ marginTop: 8 }}>Your assistant starts with what businesses like yours need. You can change anything later.</T>
+                    <T leading={24} muted style={{ marginTop: 8 }}>Your employee starts with what businesses like yours need. You can change anything later.</T>
                     <View style={{ marginTop: 24, flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
                         {BUSINESS_KINDS.map((item) => {
                             const chosen = state.kind === item.id;
@@ -382,7 +382,7 @@ export default function Setup() {
             {state.step === 3 && state.built ? (
                 <>
                     <Title>How did you hear about Cencori Studio?</Title>
-                    <T size={14} leading={20} muted style={{ marginTop: 4 }}>Your assistant is ready. One quick question before you put it to work.</T>
+                    <T size={14} leading={20} muted style={{ marginTop: 4 }}>Your employee is ready. One quick question before you put it to work.</T>
                     <View style={{ marginTop: 20, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                         {HEARD_ABOUT_OPTIONS.map((option) => <Pill key={option.id} label={option.label} chosen={heard === option.id} onPress={() => setHeard(option.id)} />)}
                     </View>

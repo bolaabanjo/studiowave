@@ -214,7 +214,7 @@ export function ProductsTask({ onDone }: { onDone: () => void }) {
                 </T>
                 {error ? <ErrorText style={{ marginTop: 12 }}>{error}</ErrorText> : null}
                 {!selling && workspace.agents[0]
-                    ? <Primary title="Let my assistant sell them" busy={turningOn} onPress={() => void sellThem(assistant?.id ?? workspace.agents[0].id)} />
+                    ? <Primary title="Let my employee sell them" busy={turningOn} onPress={() => void sellThem(assistant?.id ?? workspace.agents[0].id)} />
                     : <Primary title="Done" onPress={onDone} />}
             </>
         );

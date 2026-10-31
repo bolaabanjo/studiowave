@@ -37,7 +37,7 @@ export default function LinkQr() {
     return (
         // No flex: 1 here: the sheet takes this view's height (fitToContents), and a flexed root measures to nothing.
         <View style={{ backgroundColor: colors.background, paddingHorizontal: 20, paddingTop: SHEET_TOP, paddingBottom: insets.bottom + 20 }}>
-            <SheetHeader title="Your QR code" onClose={() => router.back()} description="Customers scan it to chat with your assistant. Put it on tables, your counter, flyers or packaging." />
+            <SheetHeader title="Your QR code" onClose={() => router.back()} description="Customers scan it to chat with your employee. Put it on tables, your counter, flyers or packaging." />
             {/* A set width: "100%" with maxWidth took its height from the full width (aspectRatio runs before the cap), so it came out tall. */}
             <View style={{ marginTop: 20, alignSelf: "center", width: 280, height: 280, borderRadius: 24, backgroundColor: "#ffffff", padding: 16 }}>
                 <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>

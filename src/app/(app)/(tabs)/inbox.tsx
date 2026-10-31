@@ -94,9 +94,9 @@ export default function Inbox() {
             ) : !inbox.data ? (
                 <LoadError error={inbox.error} fallback="Couldn't load your chats." onRetry={() => void inbox.refetch()} />
             ) : conversations.length === 0 ? (
-                view === "needs" ? <EmptyCard icon="chat-round-check" title="Nothing needs you" description="Your assistant is handling every chat." />
+                view === "needs" ? <EmptyCard icon="chat-round-check" title="Nothing needs you" description="Your employee is handling every chat." />
                     : view === "unread" ? <EmptyCard icon="chat-round-check" title="All caught up" description="No unread chats." />
-                        : <EmptyCard icon="chat-round-dots" title={channel ? `No ${CHANNEL_LABEL[channel]} chats yet` : "No chats yet"} description="When customers message your assistant, the conversations show up here." />
+                        : <EmptyCard icon="chat-round-dots" title={channel ? `No ${CHANNEL_LABEL[channel]} chats yet` : "No chats yet"} description="When customers message your employee, the conversations show up here." />
             ) : (
                 <View style={{ marginTop: 8 }}>
                     {groups.map((group, groupIndex) => (

@@ -82,9 +82,9 @@ export default function Sales() {
             ) : view === "orders" ? (
                 orders.length === 0 ? (
                     data.has_products ? (
-                        <EmptyCard icon="bag-4" title="No orders yet" description="When customers order from your assistant, they show up here." />
+                        <EmptyCard icon="bag-4" title="No orders yet" description="When customers order from your employee, they show up here." />
                     ) : (
-                        <EmptyCard icon="box" title="No products yet" description="Your assistant can take orders once it has your product list.">
+                        <EmptyCard icon="box" title="No products yet" description="Your employee can take orders once it has your product list.">
                             <Button height={44} size={14} title="Add your products" onPress={() => tasks.open("products")} style={{ marginTop: 16 }} />
                         </EmptyCard>
                     )
@@ -125,7 +125,7 @@ export default function Sales() {
                     </>
                 )
             ) : bookings.length === 0 ? (
-                <EmptyCard icon="calendar" title="No bookings yet" description="When your assistant books a table or an appointment, it shows up here." />
+                <EmptyCard icon="calendar" title="No bookings yet" description="When your employee books a table or an appointment, it shows up here." />
             ) : (
                 <View style={{ marginHorizontal: -16, marginTop: 12 }}>
                     {bookings.map((booking) => {

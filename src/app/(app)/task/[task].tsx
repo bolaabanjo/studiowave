@@ -53,7 +53,7 @@ export default function Task() {
         if (task === "products") return <ProductsTask onDone={done} />;
         if (task === "event") return <EventTask eventId={params.eventId ?? null} onDone={done} />;
         if (task === "later") return <LaterTask onDone={done} />;
-        if (!agentId || !agentBase) return <T leading={24} muted>Set up your assistant first.</T>;
+        if (!agentId || !agentBase) return <T leading={24} muted>Set up your employee first.</T>;
         if (task === "knowledge") return <KnowledgeTask agentBase={agentBase} onDone={done} />;
         if (task === "whatsapp") return <WhatsAppTask agentBase={agentBase} agentId={agentId} onDone={done} />;
         if (task === "website") return <WebsiteTask agentBase={agentBase} />;

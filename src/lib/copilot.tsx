@@ -31,7 +31,10 @@ export type CopilotAction = {
     result?: string;
 };
 
-export type CopilotMessage = { id: string; role: "user" | "assistant"; content: string; actions?: CopilotAction[]; hidden?: boolean };
+/** Something the owner told their employee, saved straight away (cencori lib/copilot/remember.ts); Undo deletes it. */
+export type CopilotNote = { id: string; fact: string; agent_id: string; agent_name: string; state: "saved" | "undoing" | "undone" | "failed" };
+
+export type CopilotMessage = { id: string; role: "user" | "assistant"; content: string; actions?: CopilotAction[]; notes?: CopilotNote[]; hidden?: boolean };
 
 export const isOpenAction = (action: CopilotAction) => action.state === "pending" || action.state === "running";
 
@@ -89,6 +92,7 @@ interface CopilotValue {
     send: (text: string) => void;
     stop: () => void;
     updateAction: (messageId: string, actionId: string, patch: Partial<CopilotAction>) => void;
+    updateNote: (messageId: string, noteId: string, patch: Partial<CopilotNote>) => void;
 }
 
 const CopilotContext = createContext<CopilotValue | null>(null);
@@ -121,6 +125,7 @@ export function CopilotProvider({ workspace, children }: { workspace: StudioWork
         abort.current = controller;
         let content = "";
         const proposed: CopilotAction[] = [];
+        const notes: CopilotNote[] = [];
         try {
             const response = await fetch(`${API_URL}/api/agent`, {
                 method: "POST",
@@ -129,7 +134,12 @@ export function CopilotProvider({ workspace, children }: { workspace: StudioWork
                 body: JSON.stringify({
                     messages: next.map((message) => ({
                         role: message.role,
-                        content: [message.content, ...(message.actions ?? []).map((action) => `[${action.title}: ${action.state}${action.result ? ` — ${action.result}` : ""}]`)].filter(Boolean).join("\n"),
+                        content: [
+                            message.content,
+                            ...(message.actions ?? []).map((action) => `[${action.title}: ${action.state}${action.result ? ` — ${action.result}` : ""}]`),
+                            // What it saved for customers, and whether the owner undid it since.
+                            ...(message.notes ?? []).map((note) => `[Saved for customers (${note.agent_name}): "${note.fact}"${note.state === "undone" ? " — the owner undid this, so it's no longer told to customers" : ""}]`),
+                        ].filter(Boolean).join("\n"),
                     })),
                     projectId: workspace.project.id,
                     organizationId: workspace.organization.id,
@@ -143,7 +153,7 @@ export function CopilotProvider({ workspace, children }: { workspace: StudioWork
             });
             if (!response.ok || !response.body) {
                 const payload = await response.json().catch(() => null) as { error?: string } | null;
-                throw new Error(payload?.error ?? "Copilot couldn't answer right now.");
+                throw new Error(payload?.error ?? "Your employee couldn't answer right now.");
             }
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
@@ -157,7 +167,7 @@ export function CopilotProvider({ workspace, children }: { workspace: StudioWork
                 for (const chunk of chunks) {
                     const line = chunk.split("\n").find((item) => item.startsWith("data: "));
                     if (!line || line === "data: [DONE]") continue;
-                    const payload = JSON.parse(line.slice(6)) as { content?: string; status?: string; discard?: boolean; error?: string; action?: CopilotAction };
+                    const payload = JSON.parse(line.slice(6)) as { content?: string; status?: string; discard?: boolean; error?: string; action?: CopilotAction; remembered?: Omit<CopilotNote, "state"> };
                     if (payload.error) throw new Error(payload.error);
                     if (payload.status) setStatus(payload.status);
                     if (payload.discard) {
@@ -168,6 +178,7 @@ export function CopilotProvider({ workspace, children }: { workspace: StudioWork
                         content += payload.content;
                         setStreaming(content);
                     }
+                    if (payload.remembered) notes.push({ ...payload.remembered, state: "saved" });
                     if (payload.action) {
                         // A page to set something up (WhatsApp, payments…) opens as a Studio sheet; other console links open in the browser.
                         const link = payload.action.kind === "open_agent_page"
@@ -179,7 +190,7 @@ export function CopilotProvider({ workspace, children }: { workspace: StudioWork
                     }
                 }
             }
-            setMessages([...next, { id: Crypto.randomUUID(), role: "assistant", content, ...(proposed.length ? { actions: proposed } : {}) }]);
+            setMessages([...next, { id: Crypto.randomUUID(), role: "assistant", content, ...(proposed.length ? { actions: proposed } : {}), ...(notes.length ? { notes } : {}) }]);
         } catch (error) {
             if ((error as Error).name !== "AbortError") setMessages([...next, { id: Crypto.randomUUID(), role: "assistant", content: (error as Error).message }]);
         } finally {
@@ -208,8 +219,16 @@ export function CopilotProvider({ workspace, children }: { workspace: StudioWork
         }
     }, [queryClient, run]);
 
+    // An Undo on something saved: no new turn, the next message carries it (see the request body).
+    const updateNote = useCallback((messageId: string, noteId: string, patch: Partial<CopilotNote>) => {
+        const next = messagesRef.current.map((message) => (message.id !== messageId || !message.notes ? message : { ...message, notes: message.notes.map((note) => (note.id === noteId ? { ...note, ...patch } : note)) }));
+        messagesRef.current = next;
+        setMessages(next);
+        if (patch.state === "undone") void queryClient.invalidateQueries({ queryKey: ["overview"] });
+    }, [queryClient]);
+
     return (
-        <CopilotContext.Provider value={{ messages, streaming, status, busy, secret, setSecret, send, stop: () => abort.current?.abort(), updateAction }}>
+        <CopilotContext.Provider value={{ messages, streaming, status, busy, secret, setSecret, send, stop: () => abort.current?.abort(), updateAction, updateNote }}>
             {children}
         </CopilotContext.Provider>
     );

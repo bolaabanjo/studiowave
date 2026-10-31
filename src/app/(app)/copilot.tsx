@@ -1,6 +1,7 @@
-import { CopilotChat } from "@/components/copilot-chat";
+import { Redirect, useLocalSearchParams } from "expo-router";
 
-/** Copilot as a sheet over any screen; with ?ask=…, that's sent straight away. */
-export default function CopilotSheet() {
-    return <CopilotChat />;
+/** The old Copilot sheet's address: talking to your employee is the AI tab now, so links here go there (with ?ask=…). */
+export default function CopilotRedirect() {
+    const { ask } = useLocalSearchParams<{ ask?: string }>();
+    return <Redirect href={{ pathname: "/assistant", params: ask ? { ask } : {} }} />;
 }

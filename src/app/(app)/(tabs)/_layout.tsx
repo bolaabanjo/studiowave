@@ -1,5 +1,4 @@
 import { NativeTabs } from "expo-router/native-tabs";
-import { COPILOT_TAB } from "@/lib/copilot-tab";
 import { useInbox } from "@/lib/queries";
 import { fonts, palette, useColors } from "@/ui/theme";
 
@@ -41,10 +40,6 @@ export default function TabsLayout() {
             <NativeTabs.Trigger name="assistant" contentStyle={behind}>
                 <NativeTabs.Trigger.Label>AI</NativeTabs.Trigger.Label>
                 <NativeTabs.Trigger.Icon src={require("../../../../assets/tabs/stars-minimalistic.png")} renderingMode="template" />
-            </NativeTabs.Trigger>
-            <NativeTabs.Trigger name="ask" contentStyle={behind} {...(COPILOT_TAB ? { role: "search" as const, disableAutomaticSearchActivation: true } : { hidden: true })}>
-                <NativeTabs.Trigger.Label>Copilot</NativeTabs.Trigger.Label>
-                <NativeTabs.Trigger.Icon src={require("../../../../assets/tabs/airdrop.png")} renderingMode="template" />
             </NativeTabs.Trigger>
         </NativeTabs>
     );

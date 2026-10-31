@@ -50,7 +50,7 @@ export default function Notifications() {
                     <View style={{ alignItems: "center", borderRadius: 24, backgroundColor: colors.card, paddingHorizontal: 24, paddingVertical: 40 }}>
                         <View style={{ marginBottom: 8 }}><Icon name="chat-round-check" size={36} color={colors.foreground} /></View>
                         <T weight="600">You&apos;re all caught up</T>
-                        <T size={14} leading={24} muted center style={{ marginTop: 4 }}>Your assistant is handling every chat.</T>
+                        <T size={14} leading={24} muted center style={{ marginTop: 4 }}>Your employee is handling every chat.</T>
                     </View>
                 ) : (
                     <>

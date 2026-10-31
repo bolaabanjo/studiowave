@@ -78,7 +78,7 @@ export default function Conversation() {
             {conversation && (conversation.owner_active || conversation.needs_owner) ? (
                 <View style={{ backgroundColor: darkMode ? alpha(palette.orange500, 0.1) : palette.orange50, paddingHorizontal: 16, paddingVertical: 10 }}>
                     <T size={13} leading={20} color={darkMode ? "#fdba74" : "#9a3412"}>
-                        {conversation.owner_active ? "You're replying. The assistant is paused in this chat." : <><T size={13} weight="600" color={darkMode ? "#fed7aa" : "#7c2d12"}>Needs you:</T> {conversation.needs_owner!.reason}</>}
+                        {conversation.owner_active ? "You're replying. Your employee is paused in this chat." : <><T size={13} weight="600" color={darkMode ? "#fed7aa" : "#7c2d12"}>Needs you:</T> {conversation.needs_owner!.reason}</>}
                     </T>
                 </View>
             ) : null}
@@ -105,7 +105,7 @@ export default function Conversation() {
             <View style={{ borderTopWidth: 1, borderTopColor: border, backgroundColor: colors.background, paddingHorizontal: 16, paddingTop: 12, paddingBottom: insets.bottom + 16 }}>
                 {act.error ? <ErrorText style={{ marginBottom: 8 }}>{act.error.message}</ErrorText> : null}
                 {!conversation || !reply ? null : reply.reason === "website" ? (
-                    <T size={13} leading={20} muted>Your assistant is handling this chat. Replying yourself works on WhatsApp, website and link chats.</T>
+                    <T size={13} leading={20} muted>Your employee is handling this chat. Replying yourself works on WhatsApp, website and link chats.</T>
                 ) : conversation.owner_active ? (
                     <>
                         {reply.possible ? (
@@ -129,12 +129,12 @@ export default function Conversation() {
                             <T size={13} leading={20} muted>WhatsApp only lets businesses reply within 24 hours of the customer&apos;s last message. Call them, or wait for them to message again.</T>
                         )}
                         {reply.possible && conversation.channel !== "whatsapp" ? <T size={12} leading={16} muted style={{ marginTop: 8 }}>They&apos;ll see your messages while the chat is open on their screen.</T> : null}
-                        <Button kind="outline" height={44} size={14} title="Hand back to the assistant" disabled={act.isPending} onPress={() => act.mutate({ action: "hand_back" })} style={{ marginTop: 8 }} />
+                        <Button kind="outline" height={44} size={14} title="Hand back to your employee" disabled={act.isPending} onPress={() => act.mutate({ action: "hand_back" })} style={{ marginTop: 8 }} />
                     </>
                 ) : (
                     <>
                         <T size={13} leading={20} muted style={{ marginBottom: 10 }}>
-                            {conversation.needs_owner ? "The assistant is waiting for you." : "Your assistant is handling this chat."} Step in to reply yourself; it pauses here until you hand back, or 30 minutes after your last message.
+                            {conversation.needs_owner ? "Your employee is waiting for you." : "Your employee is handling this chat."} Step in to reply yourself; it pauses here until you hand back, or 30 minutes after your last message.
                         </T>
                         <Button title="Step in and reply" disabled={act.isPending} onPress={() => act.mutate({ action: "step_in" })} />
                     </>
@@ -167,7 +167,7 @@ function Bubble({ message, newDay }: { message: InboxMessage; newDay: boolean })
                 <View style={{ borderRadius: 16, borderBottomRightRadius: 6, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: owner ? colors.foreground : darkMode ? alpha(palette.violet500, 0.15) : "#f5f3ff" }}>
                     {owner ? <T leading={24} color={colors.background}>{message.text}</T> : <Markdown content={message.text} />}
                 </View>
-                <T size={11} muted style={{ marginRight: 4, marginTop: 4, textAlign: "right" }}>{owner ? "You" : "Assistant"} · {clock(message.at)}</T>
+                <T size={11} muted style={{ marginRight: 4, marginTop: 4, textAlign: "right" }}>{owner ? "You" : "Your employee"} · {clock(message.at)}</T>
             </View>
         </View>
     );

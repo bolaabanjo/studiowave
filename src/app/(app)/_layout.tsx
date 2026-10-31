@@ -25,7 +25,7 @@ export default function AppLayout() {
             <Centered>
                 <View style={{ alignItems: "center" }}>
                     <T size={24} weight="600" center style={{ letterSpacing: -0.6 }}>Let&apos;s set up your business</T>
-                    <T size={14} leading={24} muted center style={{ marginTop: 8, maxWidth: 320 }}>Tell us what you do and your assistant will be ready to answer customers in a few minutes.</T>
+                    <T size={14} leading={24} muted center style={{ marginTop: 8, maxWidth: 320 }}>Tell us what you do and your employee will be ready to answer customers in a few minutes.</T>
                     <Button title="Get started" onPress={() => void WebBrowser.openBrowserAsync(`${SITE_URL}/onboarding?for=business`).then(() => query.refetch())} style={{ marginTop: 24 }} />
                     <Button kind="outline" title="Sign out" onPress={() => void signOut()} style={{ marginTop: 8 }} />
                 </View>
@@ -42,13 +42,13 @@ export default function AppLayout() {
                     <Stack.Screen name="(tabs)" />
                     <Stack.Screen name="conversation/[id]" />
                     <Stack.Screen name="assistant/[id]" />
+                    <Stack.Screen name="staff" />
                     <Stack.Screen name="event/[id]" />
                     <Stack.Screen name="setup" options={{ presentation: "fullScreenModal" }} />
                     <Stack.Screen name="profile" options={sheet} />
                     <Stack.Screen name="notifications" options={sheet} />
                     {/* Half height, sized to the code and its buttons: content-sized sheets work when the screen's root isn't flex: 1 (that measured to nothing, the blank sheets). */}
                     <Stack.Screen name="qr" options={{ presentation: "formSheet", sheetAllowedDetents: "fitToContents", sheetGrabberVisible: false, sheetCornerRadius: 24, contentStyle: { backgroundColor: colors.background } }} />
-                    <Stack.Screen name="copilot" options={sheet} />
                     <Stack.Screen name="task/[task]" options={sheet} />
                 </Stack>
             </CopilotProvider>

@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Animated, Pressable, ScrollView, TextInput, View, type ScrollViewInstance } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Clipboard from "expo-clipboard";
 import * as WebBrowser from "expo-web-browser";
-import { isOpenAction, runAction, useCopilot, type CopilotAction } from "@/lib/copilot";
+import { isOpenAction, runAction, useCopilot, type CopilotAction, type CopilotNote } from "@/lib/copilot";
+import { useApi } from "@/lib/api";
+import { useWorkspace } from "@/lib/workspace";
 import { useSession } from "@/lib/session";
 import { useTasks, type StudioTask } from "@/lib/tasks";
 import { Icon } from "@/ui/icons";
@@ -12,21 +14,20 @@ import { Markdown } from "@/ui/markdown";
 import { KeyboardSafe, Spinner, T, useKeyboard, useSheetTop } from "@/ui/kit";
 import { alpha, fonts, palette, useColors } from "@/ui/theme";
 
-/** Room for the tab bar under Copilot's box when it's a tab (the native bar floats over the screen). */
-const TAB_BAR_HEIGHT = 56;
-
+// What an employee does: report on the business, take a briefing, find who needs the owner.
 const SUGGESTIONS = [
+    "How much did I make this week?",
     "We're closed this Sunday",
-    "Add a new item to the menu",
-    "How many chats did we get today?",
-    "Help me connect WhatsApp",
+    "Who needs me right now?",
+    "Who are my best customers?",
 ];
 
 /**
- * Copilot (cencori components/studio/StudioCopilot.tsx): a sheet over any
- * screen (with ?ask=…, sent straight away), and its own tab in the tab bar.
+ * Talking to your employee (cencori components/studio/StudioCopilot.tsx): the
+ * AI tab, under its header. With ?ask=… it's sent straight away; "For Ada: "
+ * goes in the box for the owner to finish.
  */
-export function CopilotChat({ inTab }: { inTab?: boolean }) {
+export function CopilotChat({ inTab, header, name }: { inTab?: boolean; header?: ReactNode; name?: string | null }) {
     const colors = useColors();
     const insets = useSafeAreaInsets();
     const sheetTop = useSheetTop();
@@ -35,14 +36,18 @@ export function CopilotChat({ inTab }: { inTab?: boolean }) {
     const keyboard = useKeyboard();
     const tasks = useTasks();
     // "For Ada: " is a start for the owner to finish, not a question: it goes in the box.
-    const [input, setInput] = useState(params.ask?.endsWith(": ") ? params.ask : "");
+    const [input, setInput] = useState("");
     const scroll = useRef<ScrollViewInstance>(null);
-    const asked = useRef(false);
+    const asked = useRef<string | null>(null);
 
+    // Each ?ask once: the tab stays mounted, so a later one (from Home or a staff page) comes in fresh.
     useEffect(() => {
-        if (asked.current || !params.ask || params.ask.endsWith(": ")) return;
-        asked.current = true;
-        copilot.send(params.ask);
+        if (!params.ask || asked.current === params.ask) return;
+        asked.current = params.ask;
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- a link's ?ask, taken in once
+        if (params.ask.endsWith(": ")) setInput(params.ask);
+        else copilot.send(params.ask);
+        router.setParams({ ask: undefined });
     }, [params.ask, copilot]);
 
     const pending = (() => {
@@ -60,7 +65,7 @@ export function CopilotChat({ inTab }: { inTab?: boolean }) {
 
     return (
         <KeyboardSafe style={{ backgroundColor: colors.background }}>
-            {inTab ? <View style={{ height: insets.top }} /> : (
+            {inTab ? <View style={{ paddingTop: insets.top }}>{header}</View> : (
                 <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: sheetTop }}>
                     <View style={{ width: 36 }} />
                     <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: alpha(colors.mutedForeground, 0.3) }} />
@@ -72,8 +77,8 @@ export function CopilotChat({ inTab }: { inTab?: boolean }) {
             <ScrollView ref={scroll} onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: true })} style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16 }} keyboardShouldPersistTaps="handled">
                 {shown.length === 0 && !copilot.busy ? (
                     <View style={{ paddingTop: 16 }}>
-                        <T size={18} weight="600">Change something</T>
-                        <T size={14} leading={24} muted style={{ marginTop: 4 }}>Say it like you&apos;d tell a member of staff.</T>
+                        <T size={18} weight="600">{name ? `Hi, I'm ${name}` : "Let's set up your employee"}</T>
+                        <T size={14} leading={24} muted style={{ marginTop: 4 }}>{name ? `Tell ${name} like you'd tell a member of staff. What you teach it, it tells your customers.` : "Tell me about your business and I'll start answering your customers."}</T>
                         <View style={{ marginTop: 20, gap: 8 }}>
                             {SUGGESTIONS.map((suggestion) => (
                                 <Pressable key={suggestion} onPress={() => send(suggestion)} style={({ pressed }) => ({ borderRadius: 16, borderWidth: 1, borderColor: alpha(colors.border, 0.6), paddingHorizontal: 16, paddingVertical: 12, backgroundColor: pressed ? colors.muted : "transparent" })}>
@@ -92,6 +97,7 @@ export function CopilotChat({ inTab }: { inTab?: boolean }) {
                             <View key={message.id}>
                                 {message.content ? <Markdown content={message.content} /> : null}
                                 {message.actions?.map((action) => <ActionStep key={action.id} action={action} />)}
+                                {message.notes?.map((note) => <SavedNote key={note.id} note={note} onUpdate={(patch) => copilot.updateNote(message.id, note.id, patch)} />)}
                             </View>
                         ))}
                         {copilot.streaming ? <Markdown content={copilot.streaming} /> : null}
@@ -99,7 +105,8 @@ export function CopilotChat({ inTab }: { inTab?: boolean }) {
                     </View>
                 )}
             </ScrollView>
-            <View style={{ paddingHorizontal: 16, paddingBottom: keyboard.shown ? 12 : insets.bottom + (inTab ? TAB_BAR_HEIGHT : 0) + 16 }}>
+            {/* In the tabs the bottom inset already includes the tab bar (as Page's TAB_ROOM assumes): just a small gap above it. */}
+            <View style={{ paddingHorizontal: 16, paddingBottom: keyboard.shown ? 12 : insets.bottom + (inTab ? 12 : 16) }}>
                 {copilot.secret ? <SecretCard title={copilot.secret.title} secret={copilot.secret.secret} onDismiss={() => copilot.setSecret(null)} /> : null}
                 {pending ? (
                     <ActionConfirm
@@ -117,9 +124,9 @@ export function CopilotChat({ inTab }: { inTab?: boolean }) {
                             onChangeText={setInput}
                             onSubmitEditing={() => send(input)}
                             returnKeyType="send"
-                            placeholder="What should change?"
+                            placeholder={name ? `Message ${name}` : "Tell me about your business"}
                             placeholderTextColor={colors.mutedForeground}
-                            accessibilityLabel="What should change?"
+                            accessibilityLabel={name ? `Message ${name}` : "Message your employee"}
                             style={{ fontFamily: fonts["500"], fontSize: 15, color: colors.foreground }}
                         />
                     </View>
@@ -150,6 +157,41 @@ function Thinking({ label }: { label: string }) {
         return () => loop.stop();
     }, [pulse]);
     return <Animated.View accessibilityRole="text" accessibilityLiveRegion="polite" style={{ paddingVertical: 12, opacity: pulse }}><T muted>{label}</T></Animated.View>;
+}
+
+/**
+ * Something the owner told their employee, saved for customers straight away:
+ * one line under the reply, with Undo (it deletes that one knowledge document).
+ */
+function SavedNote({ note, onUpdate }: { note: CopilotNote; onUpdate: (patch: Partial<CopilotNote>) => void }) {
+    const colors = useColors();
+    const api = useApi();
+    const projectId = useWorkspace().workspace.project.id;
+    const undo = async () => {
+        onUpdate({ state: "undoing" });
+        try {
+            await api(`/api/projects/${projectId}/embedded-agents/${note.agent_id}/knowledge?source_id=${encodeURIComponent(note.id)}`, { method: "DELETE" });
+            onUpdate({ state: "undone" });
+        } catch {
+            onUpdate({ state: "failed" });
+        }
+    };
+    const undone = note.state === "undone";
+    return (
+        <View style={{ marginTop: 8, flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <View style={{ width: 16, height: 16, alignItems: "center", justifyContent: "center" }}>
+                {undone ? <Icon name="circle-slash:lucide" size={14} color={colors.mutedForeground} /> : <Icon name="check:lucide" size={14} color={palette.emerald500} />}
+            </View>
+            <T size={12} lines={1} color={undone ? colors.mutedForeground : alpha(colors.foreground, 0.9)} style={[{ flexShrink: 1 }, undone && { textDecorationLine: "line-through" }]}>
+                {undone ? `Undone: ${note.fact}` : `Saved to what ${note.agent_name} knows`}
+            </T>
+            {note.state === "saved" || note.state === "failed" ? (
+                <Pressable onPress={() => void undo()} hitSlop={8} accessibilityLabel={`Undo: ${note.fact}`}>
+                    <T size={12} weight="600" style={{ textDecorationLine: "underline" }}>{note.state === "failed" ? "Couldn't undo. Try again" : "Undo"}</T>
+                </Pressable>
+            ) : note.state === "undoing" ? <Spinner /> : null}
+        </View>
+    );
 }
 
 const STEP_LABEL: Record<CopilotAction["state"], string> = {

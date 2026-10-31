@@ -5,7 +5,6 @@ import { useInbox, useOverview } from "@/lib/queries";
 import { useWorkspace } from "@/lib/workspace";
 import { greeting, setupSteps } from "@/lib/format";
 import { useTasks } from "@/lib/tasks";
-import { COPILOT_TAB } from "@/lib/copilot-tab";
 import type { StudioOverview } from "@/lib/types";
 import { BriefSection, NeedsYouSection, QuickActions, SetupSection, TodayCard, UpNextSection } from "@/components/home";
 import { Icon } from "@/ui/icons";
@@ -34,7 +33,6 @@ export default function Home() {
                     <T size={12} muted lines={1}>{organization.name}</T>
                     <T size={20} weight="600" leading={25} style={{ letterSpacing: -0.5 }}>{greeting()}{user.firstName ? `, ${user.firstName}` : ""}</T>
                 </View>
-                {setUp && !COPILOT_TAB ? <CopilotButton /> : null}
                 {setUp ? <NotificationBell /> : null}
             </View>
 
@@ -44,7 +42,7 @@ export default function Home() {
                 <EmptyCard
                     inverted
                     icon="user-rounded"
-                    title={started ? "Finish setting up your assistant" : "Set up your assistant"}
+                    title={started ? "Finish setting up your employee" : "Set up your employee"}
                     description={started
                         ? "You're part of the way there. Pick up where you left off, and it starts answering customers on your link and WhatsApp."
                         : "A few questions about your business, and it starts answering customers on your link and WhatsApp."}
@@ -70,20 +68,6 @@ export default function Home() {
                 </>
             )}
         </Page>
-    );
-}
-
-/** Copilot, where it has no tab of its own (Android, iOS before 26.1): beside the bell. */
-function CopilotButton() {
-    const colors = useColors();
-    return (
-        <Pressable
-            onPress={() => router.push("/copilot")}
-            accessibilityLabel="Ask or change anything"
-            style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: alpha(colors.border, 0.6) }}
-        >
-            <Icon name="airdrop:huge" size={20} color={colors.foreground} />
-        </Pressable>
     );
 }
 
@@ -119,12 +103,12 @@ function PlanNotice({ plan }: { plan: NonNullable<StudioOverview["plan"]> }) {
     const overChats = plan.active && plan.used >= plan.conversations;
     if (plan.active && !plan.in_grace && !ending && !overChats) return null;
     const [title, body] = !plan.active
-        ? ["Your assistant has stopped", "Choose a plan to switch it back on."]
+        ? ["Your employee has stopped", "Choose a plan to switch it back on."]
         : plan.in_grace
             ? [`Your ${name} has ended`, `Still answering for ${graceDays} more day${graceDays === 1 ? "" : "s"}.`]
             : overChats
                 ? ["All your chats used", `${Math.max(0, plan.capacity - plan.used)} extra left.`]
-                : [daysLeft! <= 1 ? `Your ${name} ends today` : `Your ${name} ends in ${daysLeft} days`, "Renew to keep your assistant answering."];
+                : [daysLeft! <= 1 ? `Your ${name} ends today` : `Your ${name} ends in ${daysLeft} days`, "Renew to keep your employee answering."];
     const darkMode = colors.scheme === "dark";
     const look = plan.active
         ? { background: darkMode ? alpha(palette.amber500, 0.1) : palette.amber50, color: darkMode ? palette.amber200 : palette.amber900 }

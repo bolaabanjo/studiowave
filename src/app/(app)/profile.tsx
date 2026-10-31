@@ -205,7 +205,7 @@ export default function Profile() {
                                 </View>
                                 <T size={13} muted style={{ marginTop: 8 }}>
                                     {!plan.active
-                                        ? "Ended. Your assistant has stopped."
+                                        ? "Ended. Your employee has stopped."
                                         : plan.in_grace && plan.grace_end
                                             ? `Still answering until ${new Date(plan.grace_end).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`
                                             : plan.used > plan.conversations

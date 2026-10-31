@@ -233,7 +233,7 @@ export function SetupSection({ steps }: { steps: string[] }) {
                         <Row key={step} onPress={() => {
                             const task = taskForStep(step);
                             if (task) tasks.open(task);
-                            else router.push({ pathname: "/copilot", params: { ask: `Help me ${step.charAt(0).toLowerCase()}${step.slice(1)}` } });
+                            else router.navigate({ pathname: "/assistant", params: { ask: `Help me ${step.charAt(0).toLowerCase()}${step.slice(1)}` } });
                         }}>
                             {icon === "whatsapp"
                                 ? <IconCircle tone="whatsapp"><WhatsAppMark size={20} color={look.color} /></IconCircle>

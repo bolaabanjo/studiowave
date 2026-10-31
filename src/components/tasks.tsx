@@ -432,7 +432,7 @@ export function PlansTask({ onDone }: { onDone: () => void }) {
                                 <T weight="600">{naira(option.price_ngn)}<T size={12} weight="400" muted> / 30 days</T></T>
                             </View>
                             <T size={13} leading={20} muted style={{ marginTop: 4 }}>
-                                {option.conversations.toLocaleString("en-NG")} chats · {option.agents} {option.agents === 1 ? "assistant" : "assistants"}{option.extras?.length ? ` · ${option.extras.join(" · ")}` : ""}
+                                {option.conversations.toLocaleString("en-NG")} chats · {option.agents} {option.agents === 1 ? "employee" : "staff"}{option.extras?.length ? ` · ${option.extras.join(" · ")}` : ""}
                             </T>
                             <Button kind={current ? "outline" : "primary"} height={40} size={14} title={current ? "Pay for another 30 days" : `Choose ${option.name}`} busy={busy === option.id} disabled={busy !== null} onPress={() => void choose(option.id)} style={{ marginTop: 12 }} />
                         </View>
