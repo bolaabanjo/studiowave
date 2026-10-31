@@ -487,6 +487,8 @@ export function EventTask({ eventId, onDone }: { eventId: string | null; onDone:
     const [error, setError] = useState<string | null>(null);
     const [banner, setBanner] = useState<{ preview: string; upload: { data: string; mime_type: string } | null } | null>(null);
     const [bannerRemoved, setBannerRemoved] = useState(false);
+    // A new event that saved but whose banner didn't: Save then retries only the banner.
+    const [createdId, setCreatedId] = useState<string | null>(null);
     const setTier = (index: number, patch: Partial<TierDraft>) => setTiers((current) => current.map((tier, i) => (i === index ? { ...tier, ...patch } : tier)));
 
     useEffect(() => {
@@ -536,10 +538,18 @@ export function EventTask({ eventId, onDone }: { eventId: string | null; onDone:
                 await saveBanner(eventId);
                 onDone();
             } else {
-                const { event } = await api<{ event: { id: string } }>("/api/studio/events", { method: "POST", body: { project_id: projectId, action: "create", ...fields } });
-                await saveBanner(event.id).catch(() => undefined);
+                const id = createdId ?? (await api<{ event: { id: string } }>("/api/studio/events", { method: "POST", body: { project_id: projectId, action: "create", ...fields } })).event.id;
+                try {
+                    await saveBanner(id);
+                } catch (cause) {
+                    // Said, not swallowed: the event was there without its banner and nothing told the owner.
+                    setCreatedId(id);
+                    setError(`Your event is saved, but its banner didn't upload: ${cause instanceof Error ? cause.message : "try again"} Tap Save to try again.`);
+                    setBusy(false);
+                    return;
+                }
                 onDone();
-                router.push(`/event/${event.id}`);
+                router.push(`/event/${id}`);
             }
         } catch (cause) {
             setError(cause instanceof Error ? cause.message : "Couldn't save the event.");
@@ -642,7 +652,7 @@ export function EventTask({ eventId, onDone }: { eventId: string | null; onDone:
             {tiers.length < 8 ? <Pressable onPress={() => setTiers((current) => [...current, { name: current.length === 1 ? "VIP" : "", price: "", capacity: "" }])} style={{ marginTop: 8, alignSelf: "flex-start" }}><T size={13} weight="600">+ Another type</T></Pressable> : null}
             {eventId && anySold ? <T size={12} leading={20} muted style={{ marginTop: 12 }}>Ticket holders get an email if the date, time or place changes. New prices are for new sales only.</T> : null}
             <ErrorLine error={error} />
-            <Primary title={eventId ? "Save" : "Make the event"} busy={busy && !cancelling} disabled={!name.trim() || !startsAt || tiers.some((tier) => !tier.name.trim())} onPress={() => void save()} />
+            <Primary title={eventId || createdId ? "Save" : "Make the event"} busy={busy && !cancelling} disabled={!name.trim() || !startsAt || tiers.some((tier) => !tier.name.trim())} onPress={() => void save()} />
             {eventId ? (
                 <Pressable disabled={busy} onPress={() => void cancel()} style={{ marginTop: 16 }}>
                     <T size={13} center color={colors.destructive}>{cancelling ? (anySold ? "Tap again to cancel. Ticket holders get an email." : "Tap again to cancel the event") : "Cancel event"}</T>
