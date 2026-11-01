@@ -75,6 +75,12 @@
         "projectId": "5e0439be-0de1-4ba8-bcf8-d8c4571759dc"
       }
     },
-    "owner": "bolaabanjo"
+    "owner": "bolaabanjo",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/5e0439be-0de1-4ba8-bcf8-d8c4571759dc"
+    }
   }
 }
