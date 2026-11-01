@@ -115,7 +115,7 @@ export function Row({ children, onPress, style, disabled, onLongPress }: { child
     const base: StyleProp<ViewStyle> = [{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 12 }, style];
     if (!onPress) return <View style={base}>{children}</View>;
     return (
-        <Pressable onPress={onPress} onLongPress={onLongPress} delayLongPress={500} disabled={disabled} style={({ pressed }) => [base, pressed && { backgroundColor: colors.muted }]}>
+        <Pressable onPress={onPress} onLongPress={onLongPress} delayLongPress={500} disabled={disabled} style={({ pressed }) => [base, pressed && { backgroundColor: colors.pressed }]}>
             {children}
         </Pressable>
     );

@@ -170,7 +170,7 @@ function BriefListen({ at }: { at: string }) {
         }
     };
     return (
-        <Pressable onPress={toggle} disabled={loading} style={{ marginTop: 12, alignSelf: "flex-start", height: 40, flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 999, backgroundColor: colors.muted, paddingHorizontal: 16, opacity: loading ? 0.7 : 1 }}>
+        <Pressable onPress={toggle} disabled={loading} style={{ marginTop: 12, alignSelf: "flex-start", height: 40, flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 999, backgroundColor: colors.pressed, paddingHorizontal: 16, opacity: loading ? 0.7 : 1 }}>
             {loading ? <Spinner color={colors.foreground} /> : <Icon name={status.playing ? "pause:lucide" : "play:lucide"} size={16} color={colors.foreground} fill />}
             <T size={14} weight="600">{label}</T>
         </Pressable>

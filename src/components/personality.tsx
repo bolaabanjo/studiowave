@@ -154,7 +154,7 @@ function Row({ label, detail, right, onPress }: { label: string; detail?: string
         </>
     );
     const style = { flexDirection: "row" as const, alignItems: "center" as const, gap: 12, paddingHorizontal: 16, paddingVertical: 14 };
-    return onPress ? <Pressable onPress={onPress} style={({ pressed }) => [style, pressed && { backgroundColor: colors.muted }]}>{inner}</Pressable> : <View style={style}>{inner}</View>;
+    return onPress ? <Pressable onPress={onPress} style={({ pressed }) => [style, pressed && { backgroundColor: colors.pressed }]}>{inner}</Pressable> : <View style={style}>{inner}</View>;
 }
 
 function Toggle({ on, busy, onChange }: { on: boolean; busy: boolean; onChange: (on: boolean) => void }) {

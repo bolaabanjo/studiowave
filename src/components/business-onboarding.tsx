@@ -9,7 +9,7 @@ import { BottomSheet, Button, ErrorText, Field, IconButton, KeyboardSafe, T } fr
 import { alpha, palette, useColors } from "@/ui/theme";
 
 /** As cencori lib/studio/business-profile.ts keeps them. */
-const CATEGORIES = [
+export const CATEGORIES = [
     "Restaurant & food", "Fashion & clothing", "Beauty, hair & salon", "Health & wellness", "Medical & clinic",
     "Shopping & retail", "Grocery store", "Electronics & gadgets", "Events & entertainment", "Hotel & short-let",
     "Real estate", "Education", "Travel & transport", "Professional services", "Repairs & home services",
@@ -19,10 +19,13 @@ const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Frid
 /** Monday first, as people read a week. */
 const WEEK = [1, 2, 3, 4, 5, 6, 0];
 const SETS_MAX = 3;
-const DESCRIPTION_MAX = 512;
 
-type HoursMode = "selected" | "always" | "appointments";
-type HoursSet = { open: string; close: string };
+export type HoursMode = "selected" | "always" | "appointments";
+export type HoursSet = { open: string; close: string };
+export const HOURS_MODES = [["selected", "Open for selected hours"], ["always", "Always open"], ["appointments", "Appointments only"]] as const;
+export const DESCRIPTION_LIMIT = 512;
+/** Monday to Friday 9am to 6pm: where a new business's hours start. */
+export const defaultDays = (): HoursSet[][] => [0, 1, 2, 3, 4, 5, 6].map((day) => (day >= 1 && day <= 5 ? [{ open: "09:00", close: "18:00" }] : []));
 type Step = "name" | "category" | "hours" | "days" | "where" | "about";
 
 /**
@@ -40,7 +43,7 @@ export function BusinessOnboarding({ onCreated, onClose, closeLabel = "Close" }:
     const [name, setName] = useState("");
     const [categories, setCategories] = useState<string[]>([]);
     const [mode, setMode] = useState<HoursMode>("selected");
-    const [days, setDays] = useState<HoursSet[][]>(() => DAY_NAMES.map((_, day) => (day >= 1 && day <= 5 ? [{ open: "09:00", close: "18:00" }] : [])));
+    const [days, setDays] = useState<HoursSet[][]>(defaultDays);
     const [address, setAddress] = useState("");
     const [noLocation, setNoLocation] = useState(false);
     const [website, setWebsite] = useState("");
@@ -93,33 +96,12 @@ export function BusinessOnboarding({ onCreated, onClose, closeLabel = "Close" }:
                 ) : step === "category" ? (
                     <>
                         <Heading title="What kind of business?" detail="Choose up to 3. Your staff start with what businesses like yours need." />
-                        <View style={{ marginTop: 24, flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 8 }}>
-                            {CATEGORIES.map((category) => {
-                                const on = categories.includes(category);
-                                const full = !on && categories.length >= 3;
-                                return (
-                                    <Pressable key={category} disabled={full} onPress={() => setCategories((current) => (on ? current.filter((item) => item !== category) : [...current, category]))}
-                                        style={{ height: 40, paddingHorizontal: 16, borderRadius: 20, justifyContent: "center", backgroundColor: on ? colors.foreground : colors.muted, opacity: full ? 0.4 : 1 }}>
-                                        <T size={14} weight={on ? "600" : "500"} color={on ? colors.background : colors.foreground}>{category}</T>
-                                    </Pressable>
-                                );
-                            })}
-                        </View>
+                        <CategoryChips value={categories} onChange={setCategories} style={{ marginTop: 24, justifyContent: "center" }} />
                     </>
                 ) : step === "hours" ? (
                     <>
                         <Heading title="When are you open?" detail="Your staff tell customers when you open and close each day." />
-                        <View style={{ marginTop: 24, gap: 8 }}>
-                            {([["selected", "Open for selected hours"], ["always", "Always open"], ["appointments", "Appointments only"]] as const).map(([id, label]) => (
-                                <Pressable key={id} onPress={() => setMode(id)} accessibilityRole="radio" accessibilityState={{ checked: mode === id }}
-                                    style={{ flexDirection: "row", alignItems: "center", gap: 14, borderRadius: 18, paddingHorizontal: 16, height: 56, backgroundColor: colors.muted }}>
-                                    <View style={{ width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: mode === id ? colors.foreground : colors.mutedForeground, alignItems: "center", justifyContent: "center" }}>
-                                        {mode === id ? <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: colors.foreground }} /> : null}
-                                    </View>
-                                    <T>{label}</T>
-                                </Pressable>
-                            ))}
-                        </View>
+                        <HoursModePicker value={mode} onChange={setMode} style={{ marginTop: 24 }} />
                     </>
                 ) : step === "days" ? (
                     <>
@@ -129,21 +111,14 @@ export function BusinessOnboarding({ onCreated, onClose, closeLabel = "Close" }:
                 ) : step === "where" ? (
                     <>
                         <Heading title="Where can customers find you?" detail="Where your business is, or where you operate." />
-                        <Field value={address} onChangeText={setAddress} editable={!noLocation} placeholder="Address or area, e.g. 12 Admiralty Way, Lekki" style={{ marginTop: 28, opacity: noLocation ? 0.4 : 1 }} />
-                        <Pressable onPress={() => setNoLocation((value) => !value)} accessibilityRole="checkbox" accessibilityState={{ checked: noLocation }} style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 14, paddingHorizontal: 4 }}>
-                            <View style={{ width: 22, height: 22, borderRadius: 6, alignItems: "center", justifyContent: "center", backgroundColor: noLocation ? colors.foreground : "transparent", borderWidth: noLocation ? 0 : 1.5, borderColor: colors.mutedForeground }}>
-                                {noLocation ? <Icon name="check:lucide" size={14} color={colors.background} /> : null}
-                            </View>
-                            <T size={14}>My business doesn&apos;t have a physical location</T>
-                        </Pressable>
-                        <Field value={website} onChangeText={setWebsite} placeholder="Website (optional)" keyboardType="url" autoCapitalize="none" autoCorrect={false} style={{ marginTop: 20 }} />
+                        <LocationFields address={address} onAddress={setAddress} noLocation={noLocation} onNoLocation={setNoLocation} website={website} onWebsite={setWebsite} style={{ marginTop: 28 }} />
                     </>
                 ) : (
                     <>
                         <Heading title="Describe your business" detail="What you do and why customers should choose you. Your staff use it too." />
-                        <Field value={description} onChangeText={(value) => setDescription(value.slice(0, DESCRIPTION_MAX))} multiline placeholder="We do knotless braids, wigs and lashes in Lekki. Walk-ins welcome, booking preferred."
+                        <Field value={description} onChangeText={(value) => setDescription(value.slice(0, DESCRIPTION_LIMIT))} multiline placeholder="We do knotless braids, wigs and lashes in Lekki. Walk-ins welcome, booking preferred."
                             style={{ marginTop: 28, minHeight: 160, borderRadius: 20, paddingTop: 14, paddingBottom: 14, textAlignVertical: "top" }} />
-                        <T size={12} muted style={{ marginTop: 6, textAlign: "right" }}>{description.length} / {DESCRIPTION_MAX}</T>
+                        <T size={12} muted style={{ marginTop: 6, textAlign: "right" }}>{description.length} / {DESCRIPTION_LIMIT}</T>
                     </>
                 )}
             </ScrollView>
@@ -153,6 +128,62 @@ export function BusinessOnboarding({ onCreated, onClose, closeLabel = "Close" }:
                 <Button title={last ? "Create business" : "Next"} busy={busy} disabled={!canGo} onPress={last ? () => void create() : next} />
             </View>
         </KeyboardSafe>
+    );
+}
+
+/** Up to three categories, as chips. */
+export function CategoryChips({ value, onChange, style }: { value: string[]; onChange: (value: string[]) => void; style?: object }) {
+    const colors = useColors();
+    return (
+        <View style={[{ flexDirection: "row", flexWrap: "wrap", gap: 8 }, style]}>
+            {CATEGORIES.map((category) => {
+                const on = value.includes(category);
+                const full = !on && value.length >= 3;
+                return (
+                    <Pressable key={category} disabled={full} onPress={() => onChange(on ? value.filter((item) => item !== category) : [...value, category])}
+                        style={{ height: 40, paddingHorizontal: 16, borderRadius: 20, justifyContent: "center", backgroundColor: on ? colors.foreground : colors.muted, opacity: full ? 0.4 : 1 }}>
+                        <T size={14} weight={on ? "600" : "500"} color={on ? colors.background : colors.foreground}>{category}</T>
+                    </Pressable>
+                );
+            })}
+        </View>
+    );
+}
+
+/** Selected hours, always open, or appointments only. */
+export function HoursModePicker({ value, onChange, style }: { value: HoursMode; onChange: (value: HoursMode) => void; style?: object }) {
+    const colors = useColors();
+    return (
+        <View style={[{ gap: 8 }, style]}>
+            {HOURS_MODES.map(([id, label]) => (
+                <Pressable key={id} onPress={() => onChange(id)} accessibilityRole="radio" accessibilityState={{ checked: value === id }}
+                    style={{ flexDirection: "row", alignItems: "center", gap: 14, borderRadius: 999, paddingHorizontal: 18, height: 52, backgroundColor: colors.muted }}>
+                    <View style={{ width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: value === id ? colors.foreground : colors.mutedForeground, alignItems: "center", justifyContent: "center" }}>
+                        {value === id ? <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: colors.foreground }} /> : null}
+                    </View>
+                    <T>{label}</T>
+                </Pressable>
+            ))}
+        </View>
+    );
+}
+
+/** The address (or that there's no physical location) and the website. */
+export function LocationFields({ address, onAddress, noLocation, onNoLocation, website, onWebsite, style }: {
+    address: string; onAddress: (value: string) => void; noLocation: boolean; onNoLocation: (value: boolean) => void; website: string; onWebsite: (value: string) => void; style?: object;
+}) {
+    const colors = useColors();
+    return (
+        <View style={style}>
+            <Field value={address} onChangeText={onAddress} editable={!noLocation} placeholder="Address or area, e.g. 12 Admiralty Way, Lekki" style={{ opacity: noLocation ? 0.4 : 1 }} />
+            <Pressable onPress={() => onNoLocation(!noLocation)} accessibilityRole="checkbox" accessibilityState={{ checked: noLocation }} style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 14, paddingHorizontal: 4 }}>
+                <View style={{ width: 22, height: 22, borderRadius: 6, alignItems: "center", justifyContent: "center", backgroundColor: noLocation ? colors.foreground : "transparent", borderWidth: noLocation ? 0 : 1.5, borderColor: colors.mutedForeground }}>
+                    {noLocation ? <Icon name="check:lucide" size={14} color={colors.background} /> : null}
+                </View>
+                <T size={14}>My business doesn&apos;t have a physical location</T>
+            </Pressable>
+            <Field value={website} onChangeText={onWebsite} placeholder="Website (optional)" keyboardType="url" autoCapitalize="none" autoCorrect={false} style={{ marginTop: 20 }} />
+        </View>
     );
 }
 
@@ -166,7 +197,7 @@ function Heading({ title, detail }: { title: string; detail: string }) {
 }
 
 /** Each day: on or closed, and its openings ("09:00 to 18:00"), up to three a day. */
-function DaysEditor({ days, onChange }: { days: HoursSet[][]; onChange: (days: HoursSet[][]) => void }) {
+export function DaysEditor({ days, onChange }: { days: HoursSet[][]; onChange: (days: HoursSet[][]) => void }) {
     const colors = useColors();
     const [picking, setPicking] = useState<{ day: number; set: number; edge: "open" | "close" } | null>(null);
     const setDay = (day: number, sets: HoursSet[]) => onChange(days.map((current, index) => (index === day ? sets : current)));

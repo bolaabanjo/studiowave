@@ -11,7 +11,10 @@ const light = {
     foreground: "#000000",
     muted: "#f7f7f7",
     mutedForeground: "#737373",
-    card: "#fafafa",
+    // Cards share the grey of the app's pill buttons (muted).
+    card: "#f7f7f7",
+    /** A row on a card while it's pressed: a step past the card's grey. */
+    pressed: "#eeeeee",
     border: "#dedede",
     divider: "#e9e9e9",
     input: "#e5e5e5",
@@ -26,7 +29,8 @@ const dark: typeof light = {
     foreground: "#f2f2f2",
     muted: "#1a1a1a",
     mutedForeground: "#8c8c8c",
-    card: "#101010",
+    card: "#1a1a1a",
+    pressed: "#262626",
     border: "#3a3a3a",
     divider: "#292929",
     input: "#1a1a1a",

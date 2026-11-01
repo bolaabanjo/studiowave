@@ -27,7 +27,7 @@ function Row({ icon, label, right, onPress, disabled }: { icon?: IconName; label
         </>
     );
     const style = { minHeight: 52, flexDirection: "row" as const, alignItems: "center" as const, gap: 12, paddingHorizontal: 16, paddingVertical: 12, opacity: disabled ? 0.6 : 1 };
-    return onPress ? <Pressable onPress={onPress} disabled={disabled} style={({ pressed }) => [style, pressed && { backgroundColor: colors.muted }]}>{inner}</Pressable> : <View style={style}>{inner}</View>;
+    return onPress ? <Pressable onPress={onPress} disabled={disabled} style={({ pressed }) => [style, pressed && { backgroundColor: colors.pressed }]}>{inner}</Pressable> : <View style={style}>{inner}</View>;
 }
 
 function Group({ title, children }: { title?: string; children: ReactNode }) {
@@ -178,6 +178,7 @@ export default function Profile() {
                         </Pressable>
                         <T size={18} weight="600" style={{ marginTop: 12 }}>{name}</T>
                         {user.email && user.email !== name ? <T size={14} muted>{user.email}</T> : null}
+                        <Pressable onPress={() => router.push("/account")} style={{ marginTop: 14, height: 40, paddingHorizontal: 20, borderRadius: 999, backgroundColor: colors.muted, alignItems: "center", justifyContent: "center" }}><T size={14} weight="600">Edit profile</T></Pressable>
                     </View>
 
                     <Group title={organizations.length > 1 ? "Your businesses" : "Your business"}>
@@ -188,6 +189,7 @@ export default function Profile() {
                         {organizations.length > 2 ? <Row label="All businesses" onPress={() => setScreen("businesses")} right={<View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}><T size={14} muted>{organizations.length}</T><Icon name="alt-arrow-right:linear" size={16} color={colors.mutedForeground} /></View>} /> : null}
                         {organizations.length <= 2 ? <Row label="New business" onPress={() => router.push("/new-business")} right={<T size={18} leading={18} muted>+</T>} /> : null}
                     </Group>
+                    <Pressable onPress={() => router.push("/business-profile")} style={{ marginTop: 12, height: 48, borderRadius: 999, backgroundColor: colors.muted, alignItems: "center", justifyContent: "center" }}><T weight="600">Edit business</T></Pressable>
 
                     {plan ? (
                         <Group title="Your plan">

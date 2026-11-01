@@ -58,6 +58,8 @@ export default function AppLayout() {
                     <Stack.Screen name="client/[phone]" options={sheet} />
                     <Stack.Screen name="setup" options={{ presentation: "fullScreenModal" }} />
                     <Stack.Screen name="new-business" options={{ presentation: "fullScreenModal" }} />
+                    <Stack.Screen name="business-profile" options={{ presentation: "fullScreenModal" }} />
+                    <Stack.Screen name="account" options={{ presentation: "fullScreenModal" }} />
                     <Stack.Screen name="profile" options={sheet} />
                     <Stack.Screen name="notifications" options={sheet} />
                     {/* Half height, sized to the code and its buttons: content-sized sheets work when the screen's root isn't flex: 1 (that measured to nothing, the blank sheets). */}

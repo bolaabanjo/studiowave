@@ -22,7 +22,7 @@ export default function Staff() {
     const assistants = list.data?.assistants ?? [];
     const sorted = [...assistants].sort((a, b) => Number(b.published && b.active) - Number(a.published && a.active));
     const full = !!plan && assistants.length >= plan.agents;
-    const pill = ({ pressed }: { pressed: boolean }) => ({ flexDirection: "row" as const, alignItems: "center" as const, gap: 12, borderRadius: 999, backgroundColor: pressed ? colors.muted : colors.card, paddingVertical: 10, paddingLeft: 10, paddingRight: 20 });
+    const pill = ({ pressed }: { pressed: boolean }) => ({ flexDirection: "row" as const, alignItems: "center" as const, gap: 12, borderRadius: 999, backgroundColor: pressed ? colors.pressed : colors.card, paddingVertical: 10, paddingLeft: 10, paddingRight: 20 });
     const chevron = <Icon name="chevron-right:lucide" size={16} color={colors.mutedForeground} />;
 
     return (
