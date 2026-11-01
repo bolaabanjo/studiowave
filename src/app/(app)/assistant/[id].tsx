@@ -63,6 +63,9 @@ export default function AssistantDetail() {
 
                         {/* Anything else is a conversation with them, on the AI tab. */}
                         <Button kind="outline" title={`Talk to ${profile.data?.name ?? assistant.name}`} onPress={() => router.navigate({ pathname: "/copilot", params: isMain ? {} : { agent: id } })} style={{ marginTop: 24 }} />
+                        <Pressable onPress={() => setDeleting(true)} accessibilityRole="button" style={({ pressed }) => ({ marginTop: 10, height: 48, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: "#dc2626", opacity: pressed ? 0.85 : 1 })}>
+                            <T weight="600" color="#ffffff">Delete {profile.data?.name ?? assistant.name}</T>
+                        </Pressable>
                         {/* One conversation that never resets; this starts it over. What they tell customers stays. */}
                         <Pressable
                             disabled={clearing === "busy" || clearing === "done"}
@@ -79,9 +82,6 @@ export default function AssistantDetail() {
                                         : clearing === "done" ? "Chat cleared"
                                             : "Clear chat"}
                             </T>
-                        </Pressable>
-                        <Pressable onPress={() => setDeleting(true)} style={{ marginTop: 8, alignSelf: "center", paddingVertical: 6 }}>
-                            <T size={13} center color={colors.destructive}>Delete {profile.data?.name ?? assistant.name}</T>
                         </Pressable>
                         <RenameSheet key={profile.data?.name ?? assistant.name} agentId={id} name={profile.data?.name ?? assistant.name} open={renaming} onClose={() => setRenaming(false)} />
                         <DeleteSheet agentId={id} name={profile.data?.name ?? assistant.name} open={deleting} onClose={() => setDeleting(false)} />
