@@ -1,11 +1,11 @@
 import { useState, type ReactNode } from "react";
 import { Pressable, ScrollView, View } from "react-native";
-import { router } from "expo-router";
 import { goBack } from "@/lib/navigation";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useApi } from "@/lib/api";
 import { useSession } from "@/lib/session";
+import { CodeInput } from "@/ui/code-input";
 import { BottomSheet, Button, ErrorText, Field, IconButton, KeyboardSafe, LoadError, PageTitle, Sheet, SheetHeader, Skeleton, Spinner, T } from "@/ui/kit";
 import { alpha, useColors } from "@/ui/theme";
 
@@ -127,6 +127,7 @@ function EmailSheet({ initial = "", open, onClose }: { initial?: string; open: b
     const [email, setEmail] = useState(initial);
     const [sentTo, setSentTo] = useState<string | null>(null);
     const [code, setCode] = useState("");
+    const [wrong, setWrong] = useState(0);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const close = () => {
@@ -158,6 +159,7 @@ function EmailSheet({ initial = "", open, onClose }: { initial?: string; open: b
             void queryClient.invalidateQueries({ queryKey: ["workspace"] });
             close();
         } catch (cause) {
+            if (cause instanceof Error && /isn't right/i.test(cause.message)) setWrong((count) => count + 1);
             setError(cause instanceof Error ? cause.message : "Couldn't change your email.");
         } finally {
             setBusy(false);
@@ -168,13 +170,9 @@ function EmailSheet({ initial = "", open, onClose }: { initial?: string; open: b
             <SheetHeader title={initial ? "Verify your email" : "Change email"} onClose={close} description={sentTo ? `Enter the 6-digit code we sent to ${sentTo}.` : "We'll send a code to the new address to check it's yours."} />
             {sentTo ? (
                 <>
-                    <Field value={code} autoFocus keyboardType="number-pad" textContentType="oneTimeCode" autoComplete="one-time-code" maxLength={6} placeholder="000000"
-                        onChangeText={(value) => {
-                            const digits = value.replace(/\D/g, "").slice(0, 6);
-                            setCode(digits);
-                            if (digits.length === 6 && !busy) void confirm(digits);
-                        }}
-                        style={{ marginTop: 16, height: 56, fontSize: 24, letterSpacing: 8, textAlign: "center" }} />
+                    <View style={{ marginTop: 16 }}>
+                        <CodeInput value={code} onChange={setCode} onComplete={(digits) => { if (!busy) void confirm(digits); }} wrong={wrong} disabled={busy} />
+                    </View>
                     {error ? <ErrorText style={{ marginTop: 8 }}>{error}</ErrorText> : null}
                     <View style={{ flex: 1, minHeight: 16 }} />
                     <Button title="Change email" busy={busy} disabled={code.length !== 6} onPress={() => void confirm(code)} />

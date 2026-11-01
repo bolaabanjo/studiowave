@@ -7,6 +7,7 @@ import * as Clipboard from "expo-clipboard";
 import * as WebBrowser from "expo-web-browser";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { ApiError, useApi } from "@/lib/api";
+import { CodeInput } from "@/ui/code-input";
 import { SITE_URL } from "@/lib/config";
 import { pickPhotos } from "@/lib/photos";
 import { useWorkspace } from "@/lib/workspace";
@@ -247,6 +248,7 @@ function OwnNumber({ agentId, onBack, onKeepApp, keepingApp, onDone }: { agentId
     const [name, setName] = useState(workspace.project.name);
     const [sentTo, setSentTo] = useState("");
     const [code, setCode] = useState("");
+    const [wrong, setWrong] = useState(0);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const body = { project_id: workspace.project.id, agent_id: agentId };
@@ -273,6 +275,7 @@ function OwnNumber({ agentId, onBack, onKeepApp, keepingApp, onDone }: { agentId
             await api("/api/studio/whatsapp/number", { method: "POST", body: { ...body, action: "verify", code: value } });
             onDone();
         } catch (cause) {
+            if (cause instanceof ApiError && cause.reason === "wrong_code") setWrong((count) => count + 1);
             setError(cause instanceof Error ? cause.message : "Couldn't check the code.");
         } finally {
             setBusy(false);
@@ -309,22 +312,9 @@ function OwnNumber({ agentId, onBack, onKeepApp, keepingApp, onDone }: { agentId
         return (
             <>
                 <T size={14} leading={22} muted>Enter the 6-digit code sent to <T size={14} weight="600">{sentTo}</T>.</T>
-                <Input
-                    round
-                    value={code}
-                    onChangeText={(text) => {
-                        const digits = text.replace(/\D/g, "").slice(0, 6);
-                        setCode(digits);
-                        if (digits.length === 6 && !busy) void verify(digits);
-                    }}
-                    keyboardType="number-pad"
-                    textContentType="oneTimeCode"
-                    autoComplete="sms-otp"
-                    autoFocus
-                    maxLength={6}
-                    placeholder="000000"
-                    style={{ marginTop: 14, height: 56, fontSize: 24, letterSpacing: 8, textAlign: "center" }}
-                />
+                <View style={{ marginTop: 14 }}>
+                    <CodeInput value={code} onChange={setCode} onComplete={(digits) => { if (!busy) void verify(digits); }} wrong={wrong} disabled={busy} />
+                </View>
                 <ErrorLine error={error} />
                 <Primary title="Connect" busy={busy} disabled={code.length !== 6} onPress={() => void verify(code)} />
                 <View style={{ marginTop: 16, flexDirection: "row", justifyContent: "center", gap: 20 }}>

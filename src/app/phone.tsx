@@ -7,6 +7,7 @@ import { COUNTRIES, toInternational, type Country } from "@/lib/countries";
 import { AuthError, useSession } from "@/lib/session";
 import { Icon } from "@/ui/icons";
 import { BottomSheet, Button, ErrorText, IconButton, KeyboardSafe, T } from "@/ui/kit";
+import { CodeInput } from "@/ui/code-input";
 import { fonts, palette, useColors } from "@/ui/theme";
 
 type Mode = "signup" | "login";
@@ -43,6 +44,8 @@ export default function GetStarted() {
     const [last, setLast] = useState("");
     const [marketing, setMarketing] = useState(false);
     const [code, setCode] = useState("");
+    // Wrong codes so far: each one shakes the boxes red.
+    const [wrong, setWrong] = useState(0);
     // Logged in with a number that had no account yet: their name, then in.
     const [pending, setPending] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
@@ -100,6 +103,18 @@ export default function GetStarted() {
 
     const verify = (value = code) => run(async () => {
         if (value.length !== 6) throw new Error(method === "phone" ? "Enter the 6-digit code from WhatsApp." : "Enter the 6-digit code from your email.");
+        try {
+            await checkCode(value);
+        } catch (cause) {
+            // A wrong code shakes the boxes; an expired one or too many tries just says so (they need a new code).
+            if (cause instanceof AuthError && cause.code === "INVALID_OTP") {
+                setWrong((count) => count + 1);
+                throw new Error("That code isn't right. Try again.");
+            }
+            throw cause;
+        }
+    });
+    const checkCode = async (value: string) => {
         if (method === "email") {
             const token = await session.verifySignUpCode(address, value);
             // Signing up: their name goes on before the app opens. A login that had to confirm its email goes straight in.
@@ -115,7 +130,7 @@ export default function GetStarted() {
         if (!result.isNew) return session.keepSession(result.token);
         setPending(result.token);
         setStep("name");
-    });
+    };
 
     const finish = () => run(async () => {
         if (!pending) return;
@@ -168,21 +183,9 @@ export default function GetStarted() {
                             title={method === "phone" ? "Check WhatsApp" : "Check your email"}
                             detail={`We sent a 6-digit code to ${method === "phone" ? number ?? phone : address}.`}
                         />
-                        <Input
-                            value={code}
-                            autoFocus
-                            onChangeText={(value) => {
-                                const digits = value.replace(/\D/g, "").slice(0, 6);
-                                setCode(digits);
-                                if (digits.length === 6 && !busy) void verify(digits);
-                            }}
-                            placeholder="000000"
-                            keyboardType="number-pad"
-                            textContentType="oneTimeCode"
-                            autoComplete="one-time-code"
-                            maxLength={6}
-                            style={{ marginTop: 28, height: 60, fontSize: 24, letterSpacing: 8, textAlign: "center" }}
-                        />
+                        <View style={{ marginTop: 28 }}>
+                            <CodeInput value={code} onChange={setCode} onComplete={(digits) => { if (!busy) void verify(digits); }} wrong={wrong} disabled={busy} />
+                        </View>
                         <View style={{ flexDirection: "row", justifyContent: "center", marginTop: 16 }}>
                             <T size={14} muted>Didn&apos;t get it? </T>
                             <Pressable onPress={() => void resend()} disabled={busy} hitSlop={6}><T size={14} style={{ textDecorationLine: "underline" }}>Send again</T></Pressable>
