@@ -4,14 +4,15 @@ import { router, useLocalSearchParams } from "expo-router";
 import { goBack } from "@/lib/navigation";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useApi } from "@/lib/api";
+import { ApiError, useApi } from "@/lib/api";
 import { useWorkspace } from "@/lib/workspace";
 import { useAssistants, useEmployee, useOverview } from "@/lib/queries";
 import { assistantStatus } from "@/components/assistant-status";
 import { PersonalitySection, RenameSheet } from "@/components/personality";
 import { useCopilot } from "@/lib/copilot";
 import { Icon, WhatsAppMark } from "@/ui/icons";
-import { AgentOrb, BottomSheet, Button, ErrorText, IconButton, LoadError, Skeleton, Spinner, T, Tag } from "@/ui/kit";
+import { AgentOrb, BottomSheet, Button, ErrorText, Field, IconButton, LoadError, Sheet, SheetHeader, Skeleton, Spinner, T, Tag } from "@/ui/kit";
+import { CodeInput } from "@/ui/code-input";
 import { palette, useColors } from "@/ui/theme";
 
 /**
@@ -137,9 +138,11 @@ function DeleteSheet({ agentId, name, open, onClose }: { agentId: string; name: 
 }
 
 /**
- * Text this employee on WhatsApp (cencori lib/studio/owner-whatsapp.ts): one
- * tap opens WhatsApp to their number with "Link 4831" typed in, and sending it
- * links your number. Once linked, it says so and can be stopped.
+ * Text this employee on WhatsApp (cencori lib/studio/owner-whatsapp.ts): you
+ * give your WhatsApp number, they text it a code, you type the code here.
+ * Typed in the app, a code that reached a mistyped number is no use to anyone
+ * else. Until WhatsApp approves the code message, a one-tap link that sends
+ * the code to them stands in. Once linked, it says so and can be stopped.
  */
 function WhatsAppWithMe({ agentId, name }: { agentId: string; name: string }) {
     const colors = useColors();
@@ -147,24 +150,10 @@ function WhatsAppWithMe({ agentId, name }: { agentId: string; name: string }) {
     const queryClient = useQueryClient();
     const { workspace } = useWorkspace();
     const key = ["owner-whatsapp", workspace.project.id, agentId];
-    // After the tap, check every few seconds until the code arrives and they're linked.
-    const [waiting, setWaiting] = useState(false);
-    const status = useQuery({ queryKey: key, queryFn: () => api<{ linked: boolean; phone: string | null }>(`/api/studio/owner-whatsapp?project_id=${workspace.project.id}&agent_id=${agentId}`), refetchInterval: (query) => (waiting && !query.state.data?.linked ? 4_000 : false) });
+    const status = useQuery({ queryKey: key, queryFn: () => api<{ linked: boolean; phone: string | null }>(`/api/studio/owner-whatsapp?project_id=${workspace.project.id}&agent_id=${agentId}`) });
+    const [open, setOpen] = useState(false);
     const [busy, setBusy] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const link = async () => {
-        setBusy(true);
-        setError(null);
-        try {
-            const started = await api<{ link: string }>("/api/studio/owner-whatsapp", { method: "POST", body: { project_id: workspace.project.id, agent_id: agentId }, fallback: "Couldn't set that up." });
-            setWaiting(true);
-            await Linking.openURL(started.link);
-        } catch (cause) {
-            setError(cause instanceof Error ? cause.message : "Couldn't set that up.");
-        } finally {
-            setBusy(false);
-        }
-    };
+    const linked = status.data?.linked;
     const stop = async () => {
         setBusy(true);
         try {
@@ -174,10 +163,9 @@ function WhatsAppWithMe({ agentId, name }: { agentId: string; name: string }) {
             setBusy(false);
         }
     };
-    const linked = status.data?.linked;
     return (
         <View style={{ marginTop: 10 }}>
-            <Pressable onPress={() => void (linked ? undefined : link())} disabled={busy || linked} accessibilityRole="button"
+            <Pressable onPress={() => setOpen(true)} disabled={busy || linked} accessibilityRole="button"
                 style={({ pressed }) => ({ height: 48, borderRadius: 999, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, backgroundColor: colors.muted, opacity: busy ? 0.6 : pressed ? 0.85 : 1 })}>
                 {busy ? <Spinner /> : <WhatsAppMark size={18} color={palette.whatsapp} />}
                 <T weight="600">{linked ? `On WhatsApp with you${status.data?.phone ? ` (${status.data.phone})` : ""}` : `Text ${name} on WhatsApp`}</T>
@@ -185,8 +173,77 @@ function WhatsAppWithMe({ agentId, name }: { agentId: string; name: string }) {
             {linked ? (
                 <Pressable onPress={() => void stop()} disabled={busy} style={{ marginTop: 6, alignSelf: "center", paddingVertical: 4 }}><T size={13} muted>Stop texting on WhatsApp</T></Pressable>
             ) : null}
-            {error ? <ErrorText style={{ marginTop: 6 }}>{error}</ErrorText> : null}
+            {open ? <LinkSheet agentId={agentId} name={name} onClose={() => setOpen(false)} onLinked={() => { setOpen(false); void queryClient.invalidateQueries({ queryKey: key }); }} /> : null}
         </View>
+    );
+}
+
+function LinkSheet({ agentId, name, onClose, onLinked }: { agentId: string; name: string; onClose: () => void; onLinked: () => void }) {
+    const api = useApi();
+    const { workspace } = useWorkspace();
+    // A phone sign-up already gave us their number.
+    const account = useQuery({ queryKey: ["account"], queryFn: () => api<{ phone_number?: string | null }>("/api/studio/account") });
+    const [phone, setPhone] = useState<string | null>(null);
+    const [sentTo, setSentTo] = useState<string | null>(null);
+    const [fallback, setFallback] = useState<{ link: string; message: string } | null>(null);
+    const [code, setCode] = useState("");
+    const [wrong, setWrong] = useState(0);
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const number = phone ?? account.data?.phone_number ?? "";
+    const body = { project_id: workspace.project.id, agent_id: agentId };
+
+    const send = async () => {
+        setBusy(true);
+        setError(null);
+        try {
+            const result = await api<{ sent: boolean; to: string; link?: string; message?: string }>("/api/studio/owner-whatsapp", { method: "POST", body: { ...body, phone: number }, fallback: "Couldn't send the code." });
+            if (result.sent) {
+                setSentTo(result.to);
+                setCode("");
+            } else if (result.link) setFallback({ link: result.link, message: result.message ?? "" });
+        } catch (cause) {
+            setError(cause instanceof Error ? cause.message : "Couldn't send the code.");
+        } finally {
+            setBusy(false);
+        }
+    };
+    const confirm = async (value: string) => {
+        setBusy(true);
+        setError(null);
+        try {
+            await api("/api/studio/owner-whatsapp", { method: "PATCH", body: { ...body, code: value }, fallback: "Couldn't check the code." });
+            onLinked();
+        } catch (cause) {
+            if (cause instanceof ApiError && cause.reason === "wrong_code") setWrong((count) => count + 1);
+            setError(cause instanceof Error ? cause.message : "Couldn't check the code.");
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    return (
+        <Sheet open onClose={onClose}>
+            <SheetHeader title={`Text ${name} on WhatsApp`} onClose={onClose}
+                description={sentTo ? `${name} sent a code to ${sentTo} on WhatsApp. Enter it here.` : fallback ? fallback.message : `${name} will send a code to your WhatsApp. Then you can text them there anytime, and they'll message you when something needs you.`} />
+            {sentTo ? (
+                <View style={{ marginTop: 20 }}>
+                    <CodeInput value={code} onChange={setCode} onComplete={(digits) => { if (!busy) void confirm(digits); }} wrong={wrong} disabled={busy} />
+                    {error ? <ErrorText style={{ marginTop: 10 }}>{error}</ErrorText> : null}
+                    <Pressable onPress={() => void send()} disabled={busy} style={{ marginTop: 16, alignSelf: "center" }}><T size={13} muted>Send the code again</T></Pressable>
+                </View>
+            ) : fallback ? (
+                <View style={{ marginTop: 20 }}>
+                    <Button title="Open WhatsApp" icon={<WhatsAppMark size={18} color="#ffffff" />} onPress={() => void Linking.openURL(fallback.link).then(onClose)} />
+                </View>
+            ) : (
+                <View style={{ marginTop: 20 }}>
+                    <Field value={number} onChangeText={setPhone} placeholder="Your WhatsApp number, e.g. 0803 123 4567" keyboardType="phone-pad" textContentType="telephoneNumber" autoComplete="tel" autoFocus={!account.data?.phone_number} />
+                    {error ? <ErrorText style={{ marginTop: 10 }}>{error}</ErrorText> : null}
+                    <Button title="Send me a code" busy={busy} disabled={number.replace(/\D/g, "").length < 8} onPress={() => void send()} style={{ marginTop: 16 }} />
+                </View>
+            )}
+        </Sheet>
     );
 }
 
