@@ -112,6 +112,7 @@ function DeleteSheet({ agentId, name, open, onClose }: { agentId: string; name: 
             // If you were talking to them, the AI tab goes back to your main employee.
             copilot.chooseEmployee(null);
             for (const key of ["assistants", "overview", "inbox"]) void queryClient.invalidateQueries({ queryKey: [key, workspace.project.id] });
+            void queryClient.invalidateQueries({ queryKey: ["workspace"] });
             onClose();
             router.back();
         } catch (cause) {

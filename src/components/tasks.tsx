@@ -10,7 +10,7 @@ import { ApiError, useApi } from "@/lib/api";
 import { SITE_URL } from "@/lib/config";
 import { pickPhotos } from "@/lib/photos";
 import { useWorkspace } from "@/lib/workspace";
-import { Icon, type IconName } from "@/ui/icons";
+import { Icon, WhatsAppMark, type IconName } from "@/ui/icons";
 import { Button, ErrorText, Spinner, Switcher, T, siteImage } from "@/ui/kit";
 import { alpha, fonts, palette, useColors } from "@/ui/theme";
 
@@ -184,8 +184,8 @@ export function WhatsAppTask({ agentBase, agentId, onDone }: { agentBase: string
     if (state.own_number && way === "choose") {
         return (
             <>
-                <WayCard title="Give your employee a WhatsApp number" detail="Ready in 2 minutes. No Facebook. Type the number, then the code we text you." strong onPress={() => setWay("number")} />
-                <WayCard title="Use my WhatsApp Business app" detail="Keep replying from the app too. Needs a Facebook login." onPress={() => void keepTheApp()} busy={busy} style={{ marginTop: 10 }} />
+                <WayCard title="Give your employee a WhatsApp number" strong onPress={() => setWay("number")} />
+                <WayCard title="Use my WhatsApp Business app" onPress={() => void keepTheApp()} busy={busy} style={{ marginTop: 10 }} />
                 <ErrorLine error={error} />
             </>
         );
@@ -220,14 +220,14 @@ export function WhatsAppTask({ agentBase, agentId, onDone }: { agentBase: string
     );
 }
 
-function WayCard({ title, detail, onPress, strong, busy, style }: { title: string; detail: string; onPress: () => void; strong?: boolean; busy?: boolean; style?: object }) {
+function WayCard({ title, onPress, strong, busy, style }: { title: string; onPress: () => void; strong?: boolean; busy?: boolean; style?: object }) {
     const colors = useColors();
     return (
-        <Pressable onPress={onPress} disabled={busy} style={[{ flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 20, padding: 16, backgroundColor: strong ? colors.foreground : colors.muted, opacity: busy ? 0.6 : 1 }, style]}>
-            <View style={{ flex: 1, minWidth: 0 }}>
-                <T weight="600" color={strong ? colors.background : colors.foreground}>{title}</T>
-                <T size={13} leading={20} color={strong ? alpha(colors.background, 0.75) : colors.mutedForeground} style={{ marginTop: 2 }}>{detail}</T>
+        <Pressable onPress={onPress} disabled={busy} style={[{ flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 999, height: 60, paddingLeft: 12, paddingRight: 20, backgroundColor: strong ? colors.foreground : colors.muted, opacity: busy ? 0.6 : 1 }, style]}>
+            <View style={{ width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: palette.whatsapp }}>
+                <WhatsAppMark size={20} color="#ffffff" />
             </View>
+            <T weight="600" lines={1} color={strong ? colors.background : colors.foreground} style={{ flex: 1, minWidth: 0 }}>{title}</T>
             {busy ? <Spinner color={strong ? colors.background : colors.foreground} /> : <Icon name="chevron-right:lucide" size={18} color={strong ? colors.background : colors.mutedForeground} />}
         </Pressable>
     );

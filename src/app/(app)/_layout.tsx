@@ -1,8 +1,8 @@
-import { Stack } from "expo-router";
+import { useEffect, useRef } from "react";
+import { Stack, router } from "expo-router";
 import { View } from "react-native";
-import * as WebBrowser from "expo-web-browser";
-import { SITE_URL } from "@/lib/config";
 import { CopilotProvider } from "@/lib/copilot";
+import { BusinessOnboarding } from "@/components/business-onboarding";
 import { useWorkspaceQuery, WorkspaceProvider } from "@/lib/workspace";
 import { usePushRegistration } from "@/lib/push";
 import { useAdoptTimeZone } from "@/lib/time-zone";
@@ -17,21 +17,28 @@ export default function AppLayout() {
     const { query, choose } = useWorkspaceQuery();
     const workspace = query.data?.workspace ?? null;
     usePushRegistration(workspace?.project.id ?? null);
+    // A business just created here: once it's loaded, straight on to its first staff member.
+    const startStaff = useRef(false);
+    useEffect(() => {
+        if (!workspace || !startStaff.current) return;
+        startStaff.current = false;
+        router.push("/setup");
+    }, [workspace]);
     useAdoptTimeZone(workspace?.project.id ?? null);
 
     if (query.isPending) return <Centered><Spinner /></Centered>;
     if (query.isError) return <Centered><LoadError error={query.error} fallback="Couldn't load your business." onRetry={() => void query.refetch()} /></Centered>;
     if (!workspace) {
-        // Signed in, but no business yet: setup is next. It lives on the main site for now, as on the web.
+        // Signed in, but no business yet: create it here, then the first staff member.
         return (
-            <Centered>
-                <View style={{ alignItems: "center" }}>
-                    <T size={24} weight="600" center style={{ letterSpacing: -0.6 }}>Let&apos;s set up your business</T>
-                    <T size={14} leading={24} muted center style={{ marginTop: 8, maxWidth: 320 }}>Tell us what you do and your employee will be ready to answer customers in a few minutes.</T>
-                    <Button title="Get started" onPress={() => void WebBrowser.openBrowserAsync(`${SITE_URL}/onboarding?for=business`).then(() => query.refetch())} style={{ marginTop: 24 }} />
-                    <Button kind="outline" title="Sign out" onPress={() => void signOut()} style={{ marginTop: 8 }} />
-                </View>
-            </Centered>
+            <BusinessOnboarding
+                onClose={() => void signOut()}
+                closeLabel="Sign out"
+                onCreated={async (organizationId) => {
+                    startStaff.current = true;
+                    await choose(organizationId);
+                }}
+            />
         );
     }
     // Sheets are iOS's standard card (a page sheet; full screen on Android). Form sheets with set
@@ -50,6 +57,7 @@ export default function AppLayout() {
                     <Stack.Screen name="schedule/settings" />
                     <Stack.Screen name="client/[phone]" options={sheet} />
                     <Stack.Screen name="setup" options={{ presentation: "fullScreenModal" }} />
+                    <Stack.Screen name="new-business" options={{ presentation: "fullScreenModal" }} />
                     <Stack.Screen name="profile" options={sheet} />
                     <Stack.Screen name="notifications" options={sheet} />
                     {/* Half height, sized to the code and its buttons: content-sized sheets work when the screen's root isn't flex: 1 (that measured to nothing, the blank sheets). */}

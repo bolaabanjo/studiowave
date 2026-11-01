@@ -68,6 +68,8 @@ export default function Setup() {
             }
             await api("/api/studio/employee", { method: "POST", body: { project_id: project.id, agent_id: made.agentId, name: name.trim(), ...personality }, fallback: "Couldn't save their personality." });
             for (const key of ["assistants", "overview"]) void queryClient.invalidateQueries({ queryKey: [key, project.id] });
+            // Home reads who's on the staff (and who's live) from the workspace.
+            void queryClient.invalidateQueries({ queryKey: ["workspace"] });
             setStep(2);
         } catch (cause) {
             setError(cause instanceof Error ? cause.message : "Couldn't create your staff member.");
@@ -88,6 +90,8 @@ export default function Setup() {
             await api(studio, { method: "POST", body: { action: "test_version", agent_id: created.agentId, version_id: created.versionId, input: "Hello" }, fallback: `Couldn't get ${name.trim()} ready.`, timeout: 60_000 });
             await api(studio, { method: "POST", body: { action: "publish_version", agent_id: created.agentId, version_id: created.versionId }, fallback: `Couldn't put ${name.trim()} live.` });
             for (const key of ["assistants", "overview"]) void queryClient.invalidateQueries({ queryKey: [key, project.id] });
+            // Home reads who's on the staff (and who's live) from the workspace.
+            void queryClient.invalidateQueries({ queryKey: ["workspace"] });
             setStep(3);
         } catch (cause) {
             setError(cause instanceof Error ? cause.message : `Couldn't put ${name.trim()} live.`);

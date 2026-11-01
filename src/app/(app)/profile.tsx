@@ -156,7 +156,7 @@ export default function Profile() {
                 <>
                     {subHeader("Your businesses")}
                     <Group>{organizations.map(businessRow)}</Group>
-                    <Pressable onPress={() => tasks.open("newbusiness")} style={{ marginTop: 20, height: 48, borderRadius: 999, borderWidth: 1, borderColor: border, alignItems: "center", justifyContent: "center" }}><T>New business</T></Pressable>
+                    <Pressable onPress={() => router.push("/new-business")} style={{ marginTop: 20, height: 48, borderRadius: 999, borderWidth: 1, borderColor: border, alignItems: "center", justifyContent: "center" }}><T>New business</T></Pressable>
                     {error ? <ErrorText style={{ marginTop: 8, paddingHorizontal: 4 }}>{error}</ErrorText> : null}
                 </>
             ) : screen === "theme" ? (
@@ -186,7 +186,7 @@ export default function Profile() {
                             ? [organization, ...organizations.filter((item) => item.id !== organization.id).slice(0, 1)].map(businessRow)
                             : businessRow(organization)}
                         {organizations.length > 2 ? <Row label="All businesses" onPress={() => setScreen("businesses")} right={<View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}><T size={14} muted>{organizations.length}</T><Icon name="alt-arrow-right:linear" size={16} color={colors.mutedForeground} /></View>} /> : null}
-                        {organizations.length <= 2 ? <Row label="New business" onPress={() => tasks.open("newbusiness")} right={<T size={18} leading={18} muted>+</T>} /> : null}
+                        {organizations.length <= 2 ? <Row label="New business" onPress={() => router.push("/new-business")} right={<T size={18} leading={18} muted>+</T>} /> : null}
                     </Group>
 
                     {plan ? (
