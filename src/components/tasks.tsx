@@ -155,7 +155,10 @@ export function WhatsAppTask({ agentBase, agentId, onDone }: { agentBase: string
         try {
             const { url } = await api<{ url: string }>(`${agentBase}/whatsapp`, { method: "POST", body: { action: "kapso_link", return_path: "/", own_number: ownNumber } });
             await WebBrowser.openBrowserAsync(url);
-            await load();
+            // Back from Kapso: connected there means done here too.
+            const after = await api<WhatsAppState>(`${agentBase}/whatsapp`);
+            setState(after);
+            if (after.channel) onDone();
         } catch (cause) {
             setError(cause instanceof Error ? cause.message : "Couldn't start connecting WhatsApp.");
         } finally {

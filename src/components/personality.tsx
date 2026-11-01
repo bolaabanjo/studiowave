@@ -5,6 +5,28 @@ import { Icon } from "@/ui/icons";
 import { Button, ErrorText, Field, Sheet, SheetHeader, Spinner, T } from "@/ui/kit";
 import { alpha, palette, useColors } from "@/ui/theme";
 
+/** The choices, as cencori app/api/studio/employee offers them: for a new employee, before there's one to ask. */
+export const PERSONALITY_CHOICES: EmployeeProfile["choices"] = {
+    tones: [
+        { id: "warm", label: "Warm", description: "Kind and upbeat" },
+        { id: "professional", label: "Professional", description: "Polite and precise" },
+        { id: "playful", label: "Playful", description: "Light and witty" },
+        { id: "direct", label: "Straight to the point", description: "Short and clear" },
+    ],
+    languages: [
+        { id: "customer", label: "The customer's language" },
+        { id: "english", label: "English" },
+        { id: "pidgin", label: "Pidgin" },
+        { id: "yoruba", label: "Yoruba" },
+        { id: "igbo", label: "Igbo" },
+        { id: "hausa", label: "Hausa" },
+        { id: "french", label: "French" },
+    ],
+};
+
+export type Personality = Pick<EmployeeProfile, "tone" | "style" | "language" | "emoji">;
+export const DEFAULT_PERSONALITY: Personality = { tone: "warm", style: "", language: "customer", emoji: false };
+
 /**
  * An employee's personality on its profile (cencori lib/studio/persona.ts):
  * its tone, how it talks, the language it speaks and emoji. Each change saves
@@ -12,59 +34,85 @@ import { alpha, palette, useColors } from "@/ui/theme";
  */
 export function PersonalitySection({ agentId, profile }: { agentId: string; profile: EmployeeProfile }) {
     const save = useSaveEmployee(agentId);
+    return (
+        <PersonalityPicker
+            name={profile.name}
+            value={profile}
+            choices={profile.choices}
+            saving={save.isPending ? save.variables : null}
+            error={save.error?.message ?? null}
+            onChange={(change, done) => save.mutate(change, { onSuccess: done })}
+            style={{ marginTop: 24 }}
+        />
+    );
+}
+
+/**
+ * The personality controls themselves. `onChange` gets each change (and a
+ * callback for when it's kept, so a sheet can close): saved straight away on a
+ * profile, held in the form while a new employee is being made.
+ */
+export function PersonalityPicker({ name, value, choices, onChange, saving = null, error = null, style }: {
+    name: string;
+    value: Personality;
+    choices: EmployeeProfile["choices"];
+    onChange: (change: Partial<Personality>, done?: () => void) => void;
+    saving?: Partial<Personality> | null;
+    error?: string | null;
+    style?: object;
+}) {
     const [editing, setEditing] = useState<"style" | "language" | null>(null);
-    const saving = save.isPending ? save.variables : null;
-    const language = profile.choices.languages.find((option) => option.id === profile.language)?.label ?? "The customer's language";
+    const language = choices.languages.find((option) => option.id === value.language)?.label ?? "The customer's language";
+    const who = name.trim() || "your employee";
 
     return (
-        <View style={{ marginTop: 24 }}>
+        <View style={style}>
             <View style={{ marginBottom: 8, paddingHorizontal: 4 }}>
                 <T weight="600">Personality</T>
-                <T size={13} muted style={{ marginTop: 2 }}>How {profile.name} comes across, to customers and to you.</T>
+                <T size={13} muted style={{ marginTop: 2 }}>How {who} comes across, to customers and to you.</T>
             </View>
             <Card>
-                {profile.choices.tones.map((tone) => {
-                    const chosen = (saving?.tone ?? profile.tone) === tone.id;
+                {choices.tones.map((tone) => {
+                    const chosen = (saving?.tone ?? value.tone) === tone.id;
                     return (
-                        <Row key={tone.id} label={tone.label} detail={tone.description} onPress={chosen ? undefined : () => save.mutate({ tone: tone.id })}
+                        <Row key={tone.id} label={tone.label} detail={tone.description} onPress={chosen ? undefined : () => onChange({ tone: tone.id })}
                             right={saving?.tone === tone.id ? <Spinner /> : chosen ? <Icon name="check:lucide" size={16} color={palette.emerald600} /> : <View />} />
                     );
                 })}
             </Card>
             <Card style={{ marginTop: 10 }}>
-                <Row label="How they talk" detail={profile.style || "In your words, e.g. “uses Pidgin when customers do”"} onPress={() => setEditing("style")} />
+                <Row label="How they talk" detail={value.style || "In your words, e.g. “uses Pidgin when customers do”"} onPress={() => setEditing("style")} />
                 <Row label="Speaks" detail={language} onPress={() => setEditing("language")} />
-                <Row label="Emoji" detail={profile.emoji ? "Now and then" : "None"} right={<Toggle on={saving?.emoji ?? profile.emoji} busy={saving?.emoji !== undefined} onChange={(emoji) => save.mutate({ emoji })} />} />
+                <Row label="Emoji" detail={value.emoji ? "Now and then" : "None"} right={<Toggle on={saving?.emoji ?? value.emoji} busy={saving?.emoji !== undefined} onChange={(emoji) => onChange({ emoji })} />} />
             </Card>
-            {save.error && !editing ? <ErrorText style={{ marginTop: 8, paddingHorizontal: 4 }}>{save.error.message}</ErrorText> : null}
+            {error && !editing ? <ErrorText style={{ marginTop: 8, paddingHorizontal: 4 }}>{error}</ErrorText> : null}
 
-            <TalkSheet agentId={agentId} profile={profile} open={editing === "style"} onClose={() => setEditing(null)} />
+            <TalkSheet name={who} style={value.style} busy={saving?.style !== undefined} error={error} open={editing === "style"} onClose={() => setEditing(null)} onSave={(text) => onChange({ style: text }, () => setEditing(null))} />
             <Sheet open={editing === "language"} onClose={() => setEditing(null)}>
-                <SheetHeader title="Speaks" onClose={() => setEditing(null)} description={`The language ${profile.name} answers customers in.`} />
+                <SheetHeader title="Speaks" onClose={() => setEditing(null)} description={`The language ${who} answers customers in.`} />
                 <Card style={{ marginTop: 16 }}>
-                    {profile.choices.languages.map((option) => (
+                    {choices.languages.map((option) => (
                         <Row key={option.id} label={option.label}
-                            onPress={() => save.mutate({ language: option.id }, { onSuccess: () => setEditing(null) })}
-                            right={saving?.language === option.id ? <Spinner /> : profile.language === option.id ? <Icon name="check:lucide" size={16} color={palette.emerald600} /> : <View />} />
+                            onPress={() => onChange({ language: option.id }, () => setEditing(null))}
+                            right={saving?.language === option.id ? <Spinner /> : value.language === option.id ? <Icon name="check:lucide" size={16} color={palette.emerald600} /> : <View />} />
                     ))}
                 </Card>
-                {save.error ? <ErrorText style={{ marginTop: 8 }}>{save.error.message}</ErrorText> : null}
+                {error ? <ErrorText style={{ marginTop: 8 }}>{error}</ErrorText> : null}
             </Sheet>
         </View>
     );
 }
 
 /** "How they talk", in the owner's own words. */
-function TalkSheet({ agentId, profile, open, onClose }: { agentId: string; profile: EmployeeProfile; open: boolean; onClose: () => void }) {
-    const save = useSaveEmployee(agentId);
-    const [text, setText] = useState(profile.style);
+function TalkSheet({ name, style, busy, error, open, onClose, onSave }: { name: string; style: string; busy: boolean; error: string | null; open: boolean; onClose: () => void; onSave: (text: string) => void }) {
+    const [text, setText] = useState(style);
     return (
         <Sheet open={open} onClose={onClose}>
-            <SheetHeader title="How they talk" onClose={onClose} description={`Anything about how ${profile.name} speaks: words they use, how they greet people, what they never say.`} />
+            <SheetHeader title="How they talk" onClose={onClose} description={`Anything about how ${name} speaks: words they use, how they greet people, what they never say.`} />
             <Field value={text} onChangeText={setText} multiline maxLength={500} autoFocus placeholder="Uses Pidgin when customers do. Calls regulars by name. Never says 'unfortunately'." style={{ marginTop: 16, minHeight: 120, borderRadius: 20, paddingTop: 14, paddingBottom: 14, textAlignVertical: "top" }} />
             <T size={12} muted style={{ marginTop: 6, textAlign: "right" }}>{text.length}/500</T>
-            {save.error ? <ErrorText style={{ marginTop: 4 }}>{save.error.message}</ErrorText> : null}
-            <Button title="Save" busy={save.isPending} disabled={text.trim() === profile.style} onPress={() => save.mutate({ style: text }, { onSuccess: onClose })} style={{ marginTop: 12 }} />
+            {error ? <ErrorText style={{ marginTop: 4 }}>{error}</ErrorText> : null}
+            <Button title="Save" busy={busy} disabled={text.trim() === style} onPress={() => onSave(text.trim())} style={{ marginTop: 12 }} />
         </Sheet>
     );
 }

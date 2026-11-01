@@ -2,12 +2,15 @@ import { useState, type ReactNode } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useQueryClient } from "@tanstack/react-query";
+import { useApi } from "@/lib/api";
+import { useWorkspace } from "@/lib/workspace";
 import { useAssistants, useEmployee, useOverview } from "@/lib/queries";
 import { assistantStatus } from "@/components/assistant-status";
 import { PersonalitySection, RenameSheet } from "@/components/personality";
 import { useCopilot } from "@/lib/copilot";
 import { Icon } from "@/ui/icons";
-import { AgentOrb, Button, IconButton, LoadError, Skeleton, T, Tag } from "@/ui/kit";
+import { AgentOrb, BottomSheet, Button, ErrorText, IconButton, LoadError, Skeleton, Spinner, T, Tag } from "@/ui/kit";
 import { useColors } from "@/ui/theme";
 
 /**
@@ -25,6 +28,7 @@ export default function AssistantDetail() {
     // The main employee (live first, as the AI tab lists them) is the usual conversation: no ?agent.
     const isMain = [...staff].sort((a, b) => Number(b.published && b.active) - Number(a.published && a.active))[0]?.id === id;
     const [renaming, setRenaming] = useState(false);
+    const [deleting, setDeleting] = useState(false);
     const copilot = useCopilot();
     const [clearing, setClearing] = useState<"ask" | "busy" | "done" | null>(null);
     const profile = useEmployee(id);
@@ -76,11 +80,56 @@ export default function AssistantDetail() {
                                             : "Clear chat"}
                             </T>
                         </Pressable>
+                        <Pressable onPress={() => setDeleting(true)} style={{ marginTop: 8, alignSelf: "center", paddingVertical: 6 }}>
+                            <T size={13} center color={colors.destructive}>Delete {profile.data?.name ?? assistant.name}</T>
+                        </Pressable>
                         <RenameSheet key={profile.data?.name ?? assistant.name} agentId={id} name={profile.data?.name ?? assistant.name} open={renaming} onClose={() => setRenaming(false)} />
+                        <DeleteSheet agentId={id} name={profile.data?.name ?? assistant.name} open={deleting} onClose={() => setDeleting(false)} />
                     </>
                 )}
             </ScrollPage>
         </View>
+    );
+}
+
+/**
+ * Deleting a staff member, for good: they stop answering, their WhatsApp
+ * number is let go and your chat with them goes (cencori embedded-agents/studio
+ * delete_agent). Orders, bookings and money they took stay.
+ */
+function DeleteSheet({ agentId, name, open, onClose }: { agentId: string; name: string; open: boolean; onClose: () => void }) {
+    const api = useApi();
+    const queryClient = useQueryClient();
+    const { workspace } = useWorkspace();
+    const copilot = useCopilot();
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const remove = async () => {
+        setBusy(true);
+        setError(null);
+        try {
+            await api(`/api/projects/${workspace.project.id}/embedded-agents/studio`, { method: "POST", body: { action: "delete_agent", agent_id: agentId }, fallback: `Couldn't delete ${name}.` });
+            // If you were talking to them, the AI tab goes back to your main employee.
+            copilot.chooseEmployee(null);
+            for (const key of ["assistants", "overview", "inbox"]) void queryClient.invalidateQueries({ queryKey: [key, workspace.project.id] });
+            onClose();
+            router.back();
+        } catch (cause) {
+            setError(cause instanceof Error ? cause.message : `Couldn't delete ${name}.`);
+            setBusy(false);
+        }
+    };
+    return (
+        <BottomSheet open={open} onClose={onClose}>
+            <T size={17} weight="600">Delete {name}?</T>
+            <T size={14} leading={22} muted style={{ marginTop: 8 }}>{name} stops answering customers right away, their WhatsApp number is disconnected, and your chat with them is gone. Orders, bookings and money they took stay. This can&apos;t be undone.</T>
+            {error ? <ErrorText style={{ marginTop: 8 }}>{error}</ErrorText> : null}
+            <Pressable onPress={() => void remove()} disabled={busy} accessibilityRole="button" style={({ pressed }) => ({ marginTop: 20, height: 48, borderRadius: 999, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#dc2626", opacity: busy ? 0.6 : pressed ? 0.85 : 1 })}>
+                {busy ? <Spinner color="#ffffff" /> : null}
+                <T weight="600" color="#ffffff">Delete {name}</T>
+            </Pressable>
+            <Button kind="outline" title="Keep them" disabled={busy} onPress={onClose} style={{ marginTop: 8 }} />
+        </BottomSheet>
     );
 }
 
