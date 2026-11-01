@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
+import { goBack } from "@/lib/navigation";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQueryClient } from "@tanstack/react-query";
 import { useApi } from "@/lib/api";
@@ -39,7 +40,7 @@ export default function AssistantDetail() {
     return (
         <View style={{ flex: 1, backgroundColor: colors.background }}>
             <View style={{ paddingTop: insets.top + 12, paddingHorizontal: 16 }}>
-                <View style={{ height: 40, justifyContent: "center", marginLeft: -8 }}><IconButton name="chevron-left:lucide" label="Back" onPress={() => router.back()} /></View>
+                <View style={{ height: 40, justifyContent: "center", marginLeft: -8 }}><IconButton name="chevron-left:lucide" label="Back" onPress={() => goBack()} /></View>
             </View>
             <ScrollPage>
                 {overview.isLoading ? (
@@ -114,7 +115,7 @@ function DeleteSheet({ agentId, name, open, onClose }: { agentId: string; name: 
             for (const key of ["assistants", "overview", "inbox"]) void queryClient.invalidateQueries({ queryKey: [key, workspace.project.id] });
             void queryClient.invalidateQueries({ queryKey: ["workspace"] });
             onClose();
-            router.back();
+            goBack();
         } catch (cause) {
             setError(cause instanceof Error ? cause.message : `Couldn't delete ${name}.`);
             setBusy(false);

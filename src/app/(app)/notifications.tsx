@@ -1,5 +1,6 @@
 import { Pressable, ScrollView, View } from "react-native";
 import { router } from "expo-router";
+import { goBack } from "@/lib/navigation";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useInbox } from "@/lib/queries";
 import { usePushState } from "@/lib/push";
@@ -59,7 +60,7 @@ export default function Notifications() {
                             {waiting.map((conversation, index) => (
                                 <Pressable
                                     key={conversation.id}
-                                    onPress={() => { router.back(); router.push(`/conversation/${conversation.id}`); }}
+                                    onPress={() => { goBack(); router.push(`/conversation/${conversation.id}`); }}
                                     style={({ pressed }) => ({ flexDirection: "row", gap: 12, paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: index ? 1 : 0, borderTopColor: orangeLine, opacity: pressed ? 0.7 : 1 })}
                                 >
                                     <View style={{ marginTop: 6, width: 8, height: 8, borderRadius: 4, backgroundColor: palette.orange600 }} />

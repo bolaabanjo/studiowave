@@ -32,6 +32,16 @@ interface SessionValue {
     signInWithProvider(provider: "google" | "github"): Promise<boolean>;
     /** Sign in with Apple, natively (iOS); false when the owner cancelled. */
     signInWithApple(): Promise<boolean>;
+    /** A 6-digit code to a phone number ("+2348012345678"), on WhatsApp. */
+    sendPhoneCode(phoneNumber: string): Promise<void>;
+    /**
+     * Check the code: signs in (a new number becomes a new account). Doesn't keep the
+     * session yet, so a new account can give its name first: then call keepSession.
+     */
+    verifyPhoneCode(phoneNumber: string, code: string): Promise<{ token: string; isNew: boolean }>;
+    keepSession(token: string): Promise<void>;
+    /** The email sign-up code, without keeping the session: so a new account's details are saved first. */
+    verifySignUpCode(email: string, code: string): Promise<string>;
     signOut(): Promise<void>;
 }
 
@@ -44,7 +54,7 @@ export class AuthError extends Error {
     }
 }
 
-async function authCall(path: string, body: unknown): Promise<{ token: string | null }> {
+async function authCall(path: string, body: unknown): Promise<{ token: string | null; user: { name?: string } | null }> {
     const response = await fetch(`${API_URL}/api/auth/${path}`, {
         method: "POST",
         credentials: "omit",
@@ -52,10 +62,10 @@ async function authCall(path: string, body: unknown): Promise<{ token: string | 
         body: JSON.stringify(body),
     }).catch(() => null);
     if (!response) throw new Error("Couldn't reach Studiowave. Check your connection and try again.");
-    const json = (await response.json().catch(() => null)) as { token?: string; message?: string; code?: string } | null;
+    const json = (await response.json().catch(() => null)) as { token?: string; message?: string; code?: string; user?: { name?: string } } | null;
     if (!response.ok) throw new AuthError(signInError(json?.code, json?.message), json?.code);
     // The bearer plugin sends the session token in this header; sign-in also returns it in the body.
-    return { token: response.headers.get("set-auth-token") ?? json?.token ?? null };
+    return { token: response.headers.get("set-auth-token") ?? json?.token ?? null, user: json?.user ?? null };
 }
 
 function signInError(code: string | undefined, message: string | undefined): string {
@@ -180,6 +190,20 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             if (!next) return false;
             await keep(next);
             return true;
+        },
+        // Better Auth's phone-number plugin (cencori lib/auth/better-auth.ts): the code goes out on WhatsApp.
+        sendPhoneCode: async (phoneNumber) => void (await authCall("phone-number/send-otp", { phoneNumber })),
+        verifyPhoneCode: async (phoneNumber, code) => {
+            const result = await authCall("phone-number/verify", { phoneNumber, code });
+            if (!result.token) throw new Error("Couldn't sign in. Try again.");
+            // A new account is named after its number until its owner says otherwise.
+            return { token: result.token, isNew: !result.user?.name || result.user.name === phoneNumber };
+        },
+        keepSession: keep,
+        verifySignUpCode: async (email, code) => {
+            const result = await authCall("email-otp/verify-email", { email, otp: code });
+            if (!result.token) throw new Error("Couldn't sign in. Try again.");
+            return result.token;
         },
         signOut,
     }), [ready, token, keep, signOut]);

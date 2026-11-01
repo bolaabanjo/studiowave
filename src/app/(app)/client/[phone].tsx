@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
+import { goBack } from "@/lib/navigation";
 import { useClient, useClientNote } from "@/lib/queries";
 import { formatMoney } from "@/lib/format";
 import { useBusinessTimeZone } from "@/lib/time-zone";
@@ -33,7 +34,7 @@ export default function Client() {
 
     return (
         <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: top, paddingBottom: 40 }} keyboardShouldPersistTaps="handled" style={{ backgroundColor: colors.background }}>
-            <SheetHeader title="Client" onClose={() => router.back()} />
+            <SheetHeader title="Client" onClose={() => goBack()} />
             {query.isLoading ? (
                 <View style={{ marginTop: 16, gap: 12 }}><Skeleton height={64} radius={16} /><Skeleton height={120} radius={16} /></View>
             ) : notFound ? (
@@ -119,7 +120,7 @@ export default function Client() {
                         </>
                     ) : null}
 
-                    {card.chats[0] ? <Button kind="outline" title="Open their chat" onPress={() => { router.back(); router.push(`/conversation/${card.chats[0]}`); }} style={{ marginTop: 28 }} /> : null}
+                    {card.chats[0] ? <Button kind="outline" title="Open their chat" onPress={() => { goBack(); router.push(`/conversation/${card.chats[0]}`); }} style={{ marginTop: 28 }} /> : null}
                 </>
             )}
         </ScrollView>

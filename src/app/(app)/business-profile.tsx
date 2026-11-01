@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { ScrollView, View } from "react-native";
 import { router } from "expo-router";
+import { goBack } from "@/lib/navigation";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useApi } from "@/lib/api";
@@ -39,7 +40,7 @@ export default function BusinessProfile() {
                 <Form profile={query.data.profile} />
             ) : (
                 <View style={{ paddingTop: insets.top + 12, paddingHorizontal: 16 }}>
-                    <View style={{ marginLeft: -8 }}><IconButton name="chevron-left:lucide" label="Back" onPress={() => router.back()} /></View>
+                    <View style={{ marginLeft: -8 }}><IconButton name="chevron-left:lucide" label="Back" onPress={() => goBack()} /></View>
                     <PageTitle>Business profile</PageTitle>
                     {query.isLoading
                         ? <View style={{ marginTop: 16, gap: 12 }}>{[0, 1, 2].map((index) => <Skeleton key={index} height={64} radius={16} />)}</View>
@@ -79,7 +80,7 @@ function Form({ profile }: { profile: Profile | null }) {
             const body = { categories, hours: { mode, days }, address: noLocation ? null : address.trim() || null, no_location: noLocation, website: website.trim() || null, description: description.trim() || null };
             await api("/api/studio/business", { method: "PUT", body: { project_id: workspace.project.id, profile: body }, fallback: "Couldn't save your business profile." });
             void queryClient.invalidateQueries({ queryKey: ["business-profile", workspace.project.id] });
-            router.back();
+            goBack();
         } catch (cause) {
             setError(cause instanceof Error ? cause.message : "Couldn't save your business profile.");
             setBusy(false);
@@ -89,7 +90,7 @@ function Form({ profile }: { profile: Profile | null }) {
     return (
         <KeyboardSafe>
             <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: insets.top + 12, paddingBottom: 24 }} keyboardShouldPersistTaps="handled">
-                <View style={{ marginLeft: -8 }}><IconButton name="chevron-left:lucide" label="Back" onPress={() => router.back()} /></View>
+                <View style={{ marginLeft: -8 }}><IconButton name="chevron-left:lucide" label="Back" onPress={() => goBack()} /></View>
                 <PageTitle>Business profile</PageTitle>
                 <T size={14} leading={22} muted style={{ marginTop: 4 }}>Your staff tell customers this, from their next message.</T>
 

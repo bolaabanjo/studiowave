@@ -46,6 +46,7 @@ function Gate() {
         <Stack screenOptions={{ headerShown: false }}>
             <Stack.Protected guard={!token}>
                 <Stack.Screen name="sign-in" />
+                <Stack.Screen name="phone" />
             </Stack.Protected>
             <Stack.Protected guard={!!token}>
                 <Stack.Screen name="(app)" />

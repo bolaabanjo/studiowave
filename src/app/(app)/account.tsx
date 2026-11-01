@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { router } from "expo-router";
+import { goBack } from "@/lib/navigation";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useApi } from "@/lib/api";
@@ -8,9 +9,9 @@ import { useSession } from "@/lib/session";
 import { BottomSheet, Button, ErrorText, Field, IconButton, KeyboardSafe, LoadError, PageTitle, Sheet, SheetHeader, Skeleton, Spinner, T } from "@/ui/kit";
 import { alpha, useColors } from "@/ui/theme";
 
-type Account = { full_name: string | null; email: string | null; sign_in: string[]; businesses: string[]; owns_developer_organizations: boolean };
+type Account = { full_name: string | null; email: string | null; phone_number?: string | null; contact_email?: string | null; sign_in: string[]; businesses: string[]; owns_developer_organizations: boolean };
 
-const METHOD: Record<string, string> = { email: "Email and password", google: "Google", apple: "Apple", github: "GitHub" };
+const METHOD: Record<string, string> = { email: "Email and password", phone: "Phone number (WhatsApp code)", google: "Google", apple: "Apple", github: "GitHub" };
 
 /**
  * Your own account (cencori /api/studio/account): your name, your email
@@ -26,7 +27,7 @@ export default function AccountScreen() {
     return (
         <KeyboardSafe style={{ backgroundColor: colors.background }}>
             <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: insets.top + 12, paddingBottom: insets.bottom + 32 }} keyboardShouldPersistTaps="handled">
-                <View style={{ marginLeft: -8 }}><IconButton name="chevron-left:lucide" label="Back" onPress={() => router.back()} /></View>
+                <View style={{ marginLeft: -8 }}><IconButton name="chevron-left:lucide" label="Back" onPress={() => goBack()} /></View>
                 <PageTitle>Edit profile</PageTitle>
                 {query.isLoading ? (
                     <View style={{ marginTop: 16, gap: 12 }}>{[0, 1, 2].map((index) => <Skeleton key={index} height={64} radius={16} />)}</View>
@@ -78,11 +79,20 @@ function Details({ account }: { account: Account }) {
                 ) : saved ? <T size={13} muted style={{ marginTop: 8, paddingHorizontal: 4 }}>Saved.</T> : null}
             </Section>
 
+            {account.phone_number ? (
+                <Section title="Phone number">
+                    <View style={{ justifyContent: "center", borderRadius: 999, backgroundColor: colors.muted, paddingHorizontal: 20, height: 52 }}><T>{account.phone_number}</T></View>
+                </Section>
+            ) : null}
+
             <Section title="Email">
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 999, backgroundColor: colors.muted, paddingLeft: 20, paddingRight: 6, height: 52 }}>
-                    <T lines={1} style={{ flex: 1 }}>{account.email ?? "No email"}</T>
-                    <Pressable onPress={() => setChangingEmail(true)} style={{ height: 40, paddingHorizontal: 16, borderRadius: 20, justifyContent: "center", backgroundColor: colors.pressed }}><T size={14} weight="600">Change</T></Pressable>
+                    <T lines={1} muted={!account.email} style={{ flex: 1 }}>{account.email ?? account.contact_email ?? "No email yet"}</T>
+                    <Pressable onPress={() => setChangingEmail(true)} style={{ height: 40, paddingHorizontal: 16, borderRadius: 20, justifyContent: "center", backgroundColor: colors.pressed }}>
+                        <T size={14} weight="600">{account.email ? "Change" : account.contact_email ? "Verify" : "Add"}</T>
+                    </Pressable>
                 </View>
+                {!account.email && account.contact_email ? <T size={12} muted style={{ marginTop: 6, paddingHorizontal: 4 }}>Verify it to sign in with it too.</T> : null}
             </Section>
 
             {account.sign_in.length ? (
@@ -95,7 +105,7 @@ function Details({ account }: { account: Account }) {
                 <T weight="600" color="#ffffff">Delete account</T>
             </Pressable>
 
-            <EmailSheet key={account.email ?? ""} open={changingEmail} onClose={() => setChangingEmail(false)} />
+            <EmailSheet key={account.email ?? ""} initial={account.email ? "" : account.contact_email ?? ""} open={changingEmail} onClose={() => setChangingEmail(false)} />
             <DeleteSheet account={account} open={deleting} onClose={() => setDeleting(false)} />
         </>
     );
@@ -111,16 +121,16 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 }
 
 /** A new address, then the code sent to it. */
-function EmailSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+function EmailSheet({ initial = "", open, onClose }: { initial?: string; open: boolean; onClose: () => void }) {
     const api = useApi();
     const queryClient = useQueryClient();
-    const [email, setEmail] = useState("");
+    const [email, setEmail] = useState(initial);
     const [sentTo, setSentTo] = useState<string | null>(null);
     const [code, setCode] = useState("");
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const close = () => {
-        setEmail("");
+        setEmail(initial);
         setSentTo(null);
         setCode("");
         setError(null);
@@ -155,7 +165,7 @@ function EmailSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
     };
     return (
         <Sheet open={open} onClose={close}>
-            <SheetHeader title="Change email" onClose={close} description={sentTo ? `Enter the 6-digit code we sent to ${sentTo}.` : "We'll send a code to the new address to check it's yours."} />
+            <SheetHeader title={initial ? "Verify your email" : "Change email"} onClose={close} description={sentTo ? `Enter the 6-digit code we sent to ${sentTo}.` : "We'll send a code to the new address to check it's yours."} />
             {sentTo ? (
                 <>
                     <Field value={code} autoFocus keyboardType="number-pad" textContentType="oneTimeCode" autoComplete="one-time-code" maxLength={6} placeholder="000000"

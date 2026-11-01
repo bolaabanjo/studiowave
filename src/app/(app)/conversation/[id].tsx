@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { FlatList, KeyboardAvoidingView, Platform, Pressable, TextInput, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
+import { goBack } from "@/lib/navigation";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQueryClient } from "@tanstack/react-query";
 import { useConversation, useConversationAction, useMarkRead } from "@/lib/queries";
@@ -47,7 +48,7 @@ export default function Conversation() {
         else void queryClient.invalidateQueries({ queryKey: ["inbox", workspace.project.id] });
     }, [conversation, id, markRead, queryClient, workspace.project.id]);
 
-    const keepUnread = () => markRead.mutate({ id, read: false }, { onSuccess: () => router.back() });
+    const keepUnread = () => markRead.mutate({ id, read: false }, { onSuccess: () => goBack() });
     const send = () => {
         const text = draft.trim();
         if (!text || act.isPending) return;
@@ -60,7 +61,7 @@ export default function Conversation() {
     return (
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1, backgroundColor: colors.background }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 12, borderBottomWidth: 1, borderBottomColor: border, paddingHorizontal: 12, paddingBottom: 12, paddingTop: insets.top + 12 }}>
-                <IconButton name="chevron-left:lucide" label="Back to Inbox" onPress={() => router.back()} />
+                <IconButton name="chevron-left:lucide" label="Back to Inbox" onPress={() => goBack()} />
                 {conversation ? (
                     <>
                         <ConversationAvatar conversation={conversation} size={40} />

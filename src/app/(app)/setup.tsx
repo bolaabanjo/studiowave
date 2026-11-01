@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { router } from "expo-router";
+import { goBack } from "@/lib/navigation";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Crypto from "expo-crypto";
@@ -78,8 +79,8 @@ export default function Setup() {
         }
     };
 
-    const back = () => (step > 1 ? setStep(step - 1) : router.canGoBack() ? router.back() : router.replace("/"));
-    const finish = () => (created ? router.replace(`/assistant/${created.agentId}`) : router.back());
+    const back = () => (step > 1 ? setStep(step - 1) : goBack());
+    const finish = () => (created ? router.replace(`/assistant/${created.agentId}`) : goBack());
 
     /** Leaving knowledge: they go live (tested, then published), so WhatsApp has someone to answer. */
     const goLive = async () => {

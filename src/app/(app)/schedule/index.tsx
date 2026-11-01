@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { router } from "expo-router";
+import { goBack } from "@/lib/navigation";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAppointmentAction, useBookAppointment, useSchedule } from "@/lib/queries";
 import { formatMoney } from "@/lib/format";
@@ -57,7 +58,7 @@ export default function Schedule() {
     return (
         <View style={{ flex: 1, backgroundColor: colors.background }}>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: insets.top + 12 }}>
-                <View style={{ marginLeft: -8 }}><IconButton name="chevron-left:lucide" label="Back" onPress={() => router.back()} /></View>
+                <View style={{ marginLeft: -8 }}><IconButton name="chevron-left:lucide" label="Back" onPress={() => goBack()} /></View>
                 <View style={{ marginRight: -8 }}><IconButton name="tuning:linear" label="Services and hours" onPress={() => router.push("/schedule/settings")} /></View>
             </View>
             <View style={{ paddingHorizontal: 16 }}><PageTitle>Schedule</PageTitle></View>

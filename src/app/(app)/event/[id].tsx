@@ -2,6 +2,7 @@ import { useRef, useState, type ReactNode } from "react";
 import { useBusinessTimeZone } from "@/lib/time-zone";
 import { Pressable, ScrollView, Share, TextInput, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
+import { goBack } from "@/lib/navigation";
 import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQueryClient } from "@tanstack/react-query";
@@ -75,7 +76,7 @@ export default function Event() {
         <View style={{ flex: 1, backgroundColor: colors.background }}>
             {/* Back and Edit stay put while the page scrolls under them. */}
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: insets.top + 20, paddingBottom: 8 }}>
-                <View style={{ marginLeft: -8 }}><IconButton name="chevron-left:lucide" label="Back to Events" onPress={() => router.back()} /></View>
+                <View style={{ marginLeft: -8 }}><IconButton name="chevron-left:lucide" label="Back to Events" onPress={() => goBack()} /></View>
                 {summary ? <Button kind="outline" height={36} size={13} title="Edit" onPress={() => tasks.open("event", { eventId: id })} /> : null}
             </View>
             <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: insets.bottom + 32 }} keyboardShouldPersistTaps="handled">

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Pressable, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
+import { goBack } from "@/lib/navigation";
 import { useAssistants } from "@/lib/queries";
 import { useCopilot } from "@/lib/copilot";
 import type { StudioAssistantRow } from "@/lib/types";
@@ -37,7 +38,7 @@ export default function EmployeeChat() {
 function EmployeeHeader({ loading, main }: { loading: boolean; main: StudioAssistantRow | null }) {
     const colors = useColors();
     const row = { flexDirection: "row" as const, alignItems: "center" as const, gap: 10, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: alpha(colors.border, 0.4) };
-    const back = <View style={{ marginLeft: -8 }}><IconButton name="chevron-left:lucide" label="Your staff" onPress={() => (router.canGoBack() ? router.back() : router.navigate("/assistant"))} /></View>;
+    const back = <View style={{ marginLeft: -8 }}><IconButton name="chevron-left:lucide" label="Your staff" onPress={() => (router.canGoBack() ? goBack() : router.navigate("/assistant"))} /></View>;
     if (loading) return <View style={row}>{back}<Skeleton width={32} height={32} radius={16} /><Skeleton width={140} height={18} /></View>;
     if (!main) {
         // No employee yet: the chat below helps set one up, and so does setup.

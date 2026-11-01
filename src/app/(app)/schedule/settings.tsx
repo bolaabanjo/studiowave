@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { Platform, Pressable, ScrollView, View } from "react-native";
 import { router } from "expo-router";
+import { goBack } from "@/lib/navigation";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useSaveSchedule, useSchedule } from "@/lib/queries";
@@ -30,7 +31,7 @@ export default function ScheduleSettingsScreen() {
     const query = useSchedule(null, 1);
     const header = (
         <View style={{ paddingHorizontal: 16, paddingTop: insets.top + 12 }}>
-            <View style={{ marginLeft: -8 }}><IconButton name="chevron-left:lucide" label="Back" onPress={() => router.back()} /></View>
+            <View style={{ marginLeft: -8 }}><IconButton name="chevron-left:lucide" label="Back" onPress={() => goBack()} /></View>
             <PageTitle>Services and hours</PageTitle>
         </View>
     );
@@ -59,7 +60,7 @@ function Form({ schedule: data, header }: { schedule: ScheduleView; header: Reac
     const submit = () => {
         const value = amount(depositText);
         const deposit = draft.deposit.kind === "fixed" && value ? { kind: "fixed" as const, amount: value } : draft.deposit.kind === "percent" && value ? { kind: "percent" as const, percent: Math.min(100, value) } : { kind: "none" as const };
-        save.mutate({ ...draft, deposit }, { onSuccess: () => router.back() });
+        save.mutate({ ...draft, deposit }, { onSuccess: () => goBack() });
     };
 
     return (

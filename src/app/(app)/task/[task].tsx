@@ -1,5 +1,6 @@
 import { ScrollView, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
+import { goBack } from "@/lib/navigation";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQueryClient } from "@tanstack/react-query";
 import { useWorkspace } from "@/lib/workspace";
@@ -38,7 +39,7 @@ export default function Task() {
     const { workspace } = useWorkspace();
     const task = params.task in TITLES ? params.task : "later";
     const done = () => {
-        router.back();
+        goBack();
         void queryClient.invalidateQueries();
     };
     const target = task === "business" ? workspace.organizations.find((item) => item.id === params.business) ?? null : null;
@@ -66,7 +67,7 @@ export default function Task() {
         <KeyboardSafe style={{ backgroundColor: colors.background }}>
             {/* The title scrolls with the sheet's content, so nothing can sit over it. */}
             <ScrollView contentContainerStyle={{ flexGrow: FILLS.has(task) ? 1 : undefined, paddingHorizontal: 20, paddingTop: sheetTop, paddingBottom: keyboard.shown ? 12 : insets.bottom + 20 }} keyboardShouldPersistTaps="handled">
-                <View style={{ marginBottom: 4 }}><SheetHeader title={title} onClose={() => router.back()} /></View>
+                <View style={{ marginBottom: 4 }}><SheetHeader title={title} onClose={() => goBack()} /></View>
                 {body}
             </ScrollView>
         </KeyboardSafe>
