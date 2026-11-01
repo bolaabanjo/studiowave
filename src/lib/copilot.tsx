@@ -215,7 +215,7 @@ export function CopilotProvider({ workspace, children }: { workspace: StudioWork
                     conversationId: conversationId.current,
                     environment: "production",
                     currentPath: "studio",
-                    currentSurface: "Studio (the business owner's phone app)",
+                    currentSurface: "Studiowave (the business owner's phone app)",
                     userName: workspace.user.firstName,
                     // The phone's own time zone, so the employee's sense of "now" and "today" is the owner's wherever they are.
                     timeZone: deviceTimeZone(),

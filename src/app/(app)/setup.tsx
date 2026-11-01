@@ -269,7 +269,7 @@ export default function Setup() {
             <View style={{ height: 40, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
                 {back
                     ? <View style={{ marginLeft: -8 }}><IconButton name="chevron-left:lucide" label="Back" onPress={back} /></View>
-                    : <Pressable onPress={() => router.back()}><T weight="600" style={{ letterSpacing: -0.4 }}>Cencori Studio</T></Pressable>}
+                    : <Pressable onPress={() => router.back()}><T weight="600" style={{ letterSpacing: -0.4 }}>Studiowave</T></Pressable>}
                 <T size={13} muted>Step {state.step} of 5</T>
             </View>
             <View style={{ marginTop: 12 }}><Progress step={state.step} /></View>
@@ -382,7 +382,7 @@ export default function Setup() {
 
             {state.step === 3 && state.built ? (
                 <>
-                    <Title>How did you hear about Cencori Studio?</Title>
+                    <Title>How did you hear about Studiowave?</Title>
                     <T size={14} leading={20} muted style={{ marginTop: 4 }}>Your employee is ready. One quick question before you put it to work.</T>
                     <View style={{ marginTop: 20, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                         {HEARD_ABOUT_OPTIONS.map((option) => <Pill key={option.id} label={option.label} chosen={heard === option.id} onPress={() => setHeard(option.id)} />)}

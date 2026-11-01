@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Studio",
-    "slug": "studio-mobile",
+    "name": "Studiowave",
+    "slug": "studiowave",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -39,15 +39,15 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Studio uses the camera to scan tickets at the door and to photograph your menu or price list.",
+          "cameraPermission": "Studiowave uses the camera to scan tickets at the door and to photograph your menu or price list.",
           "recordAudioAndroid": false
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Studio uses your photos for your profile picture, event flyers, and reading your menu or product list.",
-          "cameraPermission": "Studio uses the camera to photograph your menu or price list."
+          "photosPermission": "Studiowave uses your photos for your profile picture, event flyers, and reading your menu or product list.",
+          "cameraPermission": "Studiowave uses the camera to photograph your menu or price list."
         }
       ],
       "expo-asset",

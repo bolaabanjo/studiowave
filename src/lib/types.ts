@@ -106,7 +106,7 @@ export interface SalesBooking {
     title: string;
     start: string | null;
     detail: string | null;
-    status: "confirmed" | "done" | "cancelled";
+    status: "held" | "confirmed" | "done" | "cancelled" | "no_show";
     conversation_id: string | null;
     created_at: string;
     deposit: { amount: number; currency: string } | null;
@@ -188,3 +188,71 @@ export interface StudioEventSummary {
 }
 
 export interface StudioGuest { id: string; tier_id: string; code: string; buyer_name: string; buyer_phone: string | null; price: number; paid_at: string | null; checked_in_at: string | null }
+
+/** The appointment book (cencori lib/studio/schedule-slots.ts). */
+export interface ScheduleService { id: string; name: string; minutes: number; price: number | null; deposit?: number | null }
+export type ScheduleDayHours = { open: string; close: string } | null;
+export type ScheduleDeposit = { kind: "none" } | { kind: "fixed"; amount: number } | { kind: "percent"; percent: number };
+export interface ScheduleSettings {
+    services: ScheduleService[];
+    /** Sunday first. */
+    hours: ScheduleDayHours[];
+    chairs: number;
+    deposit: ScheduleDeposit;
+    hold_minutes: number;
+    buffer_minutes: number;
+    lead_minutes: number;
+    days_ahead: number;
+    reminders: boolean;
+}
+
+export interface Appointment {
+    id: string;
+    title: string;
+    service: string | null;
+    service_id: string | null;
+    starts_at: string | null;
+    ends_at: string | null;
+    status: "held" | "confirmed" | "done" | "cancelled" | "no_show";
+    customer_name: string | null;
+    customer_phone: string | null;
+    price: number | null;
+    currency: string;
+    deposit: { amount: number; currency: string; method: "link" | "transfer"; paid: boolean; claimed: boolean } | null;
+    held_until: string | null;
+    note: string | null;
+    conversation_id: string | null;
+    reminders: { day_before?: string; two_hours?: string; skipped?: string };
+    customer_confirmed: boolean;
+    source: "calendar" | "schedule" | "owner";
+    created_at: string;
+}
+
+export interface ScheduleView {
+    set_up: boolean;
+    settings: ScheduleSettings;
+    time_zone: string;
+    currency: string;
+    takes_deposits: boolean;
+    reminder_template: "approved" | "pending" | "rejected" | "error" | "none";
+    from: string;
+    days: number;
+    appointments: Appointment[];
+}
+
+export interface ClientNote { id: string; text: string; at: string; by: "owner" | "employee" }
+
+export interface ClientCard {
+    phone: string;
+    name: string | null;
+    visits: number;
+    no_shows: number;
+    cancelled: number;
+    upcoming: Array<{ id: string; service: string | null; starts_at: string; status: string; deposit_paid: boolean; customer_confirmed: boolean }>;
+    recent: Array<{ service: string | null; starts_at: string | null; status: string }>;
+    orders: Array<{ id: string; summary: string; total: number; currency: string; status: string; created_at: string }>;
+    spent: { amount: number; currency: string };
+    notes: ClientNote[];
+    first_seen: string | null;
+    chats: string[];
+}

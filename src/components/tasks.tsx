@@ -6,7 +6,7 @@ import { Image } from "expo-image";
 import * as Clipboard from "expo-clipboard";
 import * as WebBrowser from "expo-web-browser";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { useApi } from "@/lib/api";
+import { ApiError, useApi } from "@/lib/api";
 import { SITE_URL } from "@/lib/config";
 import { pickPhotos } from "@/lib/photos";
 import { useWorkspace } from "@/lib/workspace";
@@ -110,14 +110,16 @@ export function KnowledgeTask({ agentBase, onDone }: { agentBase: string; onDone
     );
 }
 
-type WhatsAppState = { channel: { display_phone_number?: string | null } | null; signup: { app_id: string } | null; kapso: boolean };
+type WhatsAppState = { channel: { display_phone_number?: string | null } | null; signup: { app_id: string } | null; kapso: boolean; own_number?: boolean };
 
 /**
- * Connect WhatsApp: Meta's own signup in the phone's browser, coming back to
- * the app to finish (cencori app/api/studio/whatsapp/start, finish), or Kapso's.
- * Either way the owner chooses: keep their WhatsApp Business app number
- * (shared), or give the employee a number of its own (a new SIM that isn't on
- * WhatsApp, answered from Studio).
+ * Connect WhatsApp. The main way, when the server has it on (own_number): give
+ * the employee a number with no Facebook at all: type it, get a code by text
+ * or call, type the code (cencori app/api/studio/whatsapp/number). A number
+ * still on the WhatsApp Business app has to leave the app first; the sheet
+ * shows how. The other way keeps the WhatsApp Business app on the number too:
+ * Meta's own signup in the phone's browser (cencori app/api/studio/whatsapp/start,
+ * finish), or Kapso's, both with a Facebook login.
  */
 export function WhatsAppTask({ agentBase, agentId, onDone }: { agentBase: string; agentId: string; onDone: () => void }) {
     const api = useApi();
@@ -126,14 +128,15 @@ export function WhatsAppTask({ agentBase, agentId, onDone }: { agentBase: string
     const [keepApp, setKeepApp] = useState(true);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [way, setWay] = useState<"choose" | "number" | "app">("choose");
     const load = () => api<WhatsAppState>(`${agentBase}/whatsapp`).then(setState).catch((cause) => setError(cause instanceof Error ? cause.message : "Couldn't load it."));
     useEffect(() => { void load(); }, [agentBase]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const withMeta = async () => {
+    const withMeta = async (coexistence = keepApp) => {
         setBusy(true);
         setError(null);
         try {
-            const { url } = await api<{ url: string }>("/api/studio/whatsapp/start", { method: "POST", body: { project_id: projectId, agent_id: agentId, coexistence: keepApp } });
+            const { url } = await api<{ url: string }>("/api/studio/whatsapp/start", { method: "POST", body: { project_id: projectId, agent_id: agentId, coexistence } });
             const result = await WebBrowser.openAuthSessionAsync(url, "cencori-studio://whatsapp");
             if (result.type !== "success") return;
             const params = new URL(result.url).searchParams;
@@ -146,11 +149,11 @@ export function WhatsAppTask({ agentBase, agentId, onDone }: { agentBase: string
             setBusy(false);
         }
     };
-    const withKapso = async () => {
+    const withKapso = async (ownNumber = !keepApp) => {
         setBusy(true);
         setError(null);
         try {
-            const { url } = await api<{ url: string }>(`${agentBase}/whatsapp`, { method: "POST", body: { action: "kapso_link", return_path: "/", own_number: !keepApp } });
+            const { url } = await api<{ url: string }>(`${agentBase}/whatsapp`, { method: "POST", body: { action: "kapso_link", return_path: "/", own_number: ownNumber } });
             await WebBrowser.openBrowserAsync(url);
             await load();
         } catch (cause) {
@@ -159,6 +162,8 @@ export function WhatsAppTask({ agentBase, agentId, onDone }: { agentBase: string
             setBusy(false);
         }
     };
+    /** Keep the WhatsApp Business app on the number: Meta's signup when it's open to us, else Kapso's. */
+    const keepTheApp = () => (state?.signup ? withMeta(true) : withKapso(false));
 
     if (!state) return error ? <ErrorLine error={error} /> : <Loading />;
     if (state.channel) {
@@ -169,12 +174,26 @@ export function WhatsAppTask({ agentBase, agentId, onDone }: { agentBase: string
             </View>
         );
     }
+
+    if (state.own_number && way === "number") {
+        return <OwnNumber agentId={agentId} onBack={() => setWay("choose")} onKeepApp={() => void keepTheApp()} keepingApp={busy} onDone={onDone} />;
+    }
+    if (state.own_number && way === "choose") {
+        return (
+            <>
+                <WayCard title="Give your employee a WhatsApp number" detail="Ready in 2 minutes. No Facebook. Type the number, then the code we text you." strong onPress={() => setWay("number")} />
+                <WayCard title="Use my WhatsApp Business app" detail="Keep replying from the app too. Needs a Facebook login." onPress={() => void keepTheApp()} busy={busy} style={{ marginTop: 10 }} />
+                <ErrorLine error={error} />
+            </>
+        );
+    }
+
     const choice = (
         <ToggleRow
             title="Keep the WhatsApp Business app"
             detail={keepApp
                 ? "Same number. You can still reply from your phone."
-                : "Off: your employee gets its own number. Use a new SIM that has never been on WhatsApp; you'll reply to customers from Studio, not the WhatsApp app."}
+                : "Off: your employee gets its own number. Use a new SIM that has never been on WhatsApp; you'll reply to customers from Studiowave, not the WhatsApp app."}
             on={keepApp}
             onPress={() => setKeepApp((value) => !value)}
         />
@@ -198,7 +217,141 @@ export function WhatsAppTask({ agentBase, agentId, onDone }: { agentBase: string
     );
 }
 
-function ToggleRow({ title, detail, on, onPress }: { title: string; detail: string; on: boolean; onPress: () => void }) {
+function WayCard({ title, detail, onPress, strong, busy, style }: { title: string; detail: string; onPress: () => void; strong?: boolean; busy?: boolean; style?: object }) {
+    const colors = useColors();
+    return (
+        <Pressable onPress={onPress} disabled={busy} style={[{ flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 20, padding: 16, backgroundColor: strong ? colors.foreground : colors.muted, opacity: busy ? 0.6 : 1 }, style]}>
+            <View style={{ flex: 1, minWidth: 0 }}>
+                <T weight="600" color={strong ? colors.background : colors.foreground}>{title}</T>
+                <T size={13} leading={20} color={strong ? alpha(colors.background, 0.75) : colors.mutedForeground} style={{ marginTop: 2 }}>{detail}</T>
+            </View>
+            {busy ? <Spinner color={strong ? colors.background : colors.foreground} /> : <Icon name="chevron-right:lucide" size={18} color={strong ? colors.background : colors.mutedForeground} />}
+        </Pressable>
+    );
+}
+
+/**
+ * The number, then the code. Meta texts it (or calls, if asked); the code box
+ * fills itself from the text on phones that offer it, and checks itself at
+ * 6 digits. A number still on the WhatsApp app gets the steps to move it.
+ */
+function OwnNumber({ agentId, onBack, onKeepApp, keepingApp, onDone }: { agentId: string; onBack: () => void; onKeepApp: () => void; keepingApp: boolean; onDone: () => void }) {
+    const api = useApi();
+    const { workspace } = useWorkspace();
+    const colors = useColors();
+    const [step, setStep] = useState<"number" | "code" | "on_whatsapp">("number");
+    const [phone, setPhone] = useState("");
+    const [name, setName] = useState(workspace.project.name);
+    const [sentTo, setSentTo] = useState("");
+    const [code, setCode] = useState("");
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const body = { project_id: workspace.project.id, agent_id: agentId };
+
+    const send = async (method: "SMS" | "VOICE") => {
+        setBusy(true);
+        setError(null);
+        try {
+            const result = await api<{ phone: string }>("/api/studio/whatsapp/number", { method: "POST", body: { ...body, action: "send_code", phone, display_name: name, method } });
+            setSentTo(result.phone);
+            setCode("");
+            setStep("code");
+        } catch (cause) {
+            if (cause instanceof ApiError && cause.reason === "on_whatsapp") setStep("on_whatsapp");
+            else setError(cause instanceof Error ? cause.message : "Couldn't send the code.");
+        } finally {
+            setBusy(false);
+        }
+    };
+    const verify = async (value: string) => {
+        setBusy(true);
+        setError(null);
+        try {
+            await api("/api/studio/whatsapp/number", { method: "POST", body: { ...body, action: "verify", code: value } });
+            onDone();
+        } catch (cause) {
+            setError(cause instanceof Error ? cause.message : "Couldn't check the code.");
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    if (step === "on_whatsapp") {
+        const lines = [
+            "Want your chats? Back them up first: WhatsApp Business, then Settings, Chats, Chat backup.",
+            "In WhatsApp Business, go to Settings, then Account, then Delete my account, and enter this number.",
+            "Come back here and send the code.",
+        ];
+        return (
+            <>
+                <T weight="600">This number is on the WhatsApp Business app</T>
+                <T size={14} leading={22} muted style={{ marginTop: 6 }}>A WhatsApp number can only be in one place. To give it to your employee, take it off the app first. Customers keep messaging the same number; your employee answers, and you see every chat here.</T>
+                <View style={{ marginTop: 14, gap: 10 }}>
+                    {lines.map((line, index) => (
+                        <View key={line} style={{ flexDirection: "row", gap: 10 }}>
+                            <View style={{ width: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center", backgroundColor: colors.muted }}><T size={12} weight="600">{index + 1}</T></View>
+                            <T size={14} leading={22} style={{ flex: 1 }}>{line}</T>
+                        </View>
+                    ))}
+                </View>
+                <ErrorLine error={error} />
+                <Primary title="I've done it, send the code" busy={busy} onPress={() => void send("SMS")} />
+                <Pressable disabled={keepingApp} onPress={onKeepApp} style={{ marginTop: 16 }}><T size={13} muted center>Keep the app on this number instead (needs Facebook)</T></Pressable>
+                <Pressable onPress={() => setStep("number")} style={{ marginTop: 12 }}><T size={13} muted center>Use another number</T></Pressable>
+            </>
+        );
+    }
+
+    if (step === "code") {
+        return (
+            <>
+                <T size={14} leading={22} muted>Enter the 6-digit code sent to <T size={14} weight="600">{sentTo}</T>.</T>
+                <Input
+                    round
+                    value={code}
+                    onChangeText={(text) => {
+                        const digits = text.replace(/\D/g, "").slice(0, 6);
+                        setCode(digits);
+                        if (digits.length === 6 && !busy) void verify(digits);
+                    }}
+                    keyboardType="number-pad"
+                    textContentType="oneTimeCode"
+                    autoComplete="sms-otp"
+                    autoFocus
+                    maxLength={6}
+                    placeholder="000000"
+                    style={{ marginTop: 14, height: 56, fontSize: 24, letterSpacing: 8, textAlign: "center" }}
+                />
+                <ErrorLine error={error} />
+                <Primary title="Connect" busy={busy} disabled={code.length !== 6} onPress={() => void verify(code)} />
+                <View style={{ marginTop: 16, flexDirection: "row", justifyContent: "center", gap: 20 }}>
+                    <Pressable disabled={busy} onPress={() => void send("VOICE")}><T size={13} muted>Call me instead</T></Pressable>
+                    <Pressable disabled={busy} onPress={() => void send("SMS")}><T size={13} muted>Send again</T></Pressable>
+                    <Pressable disabled={busy} onPress={() => setStep("number")}><T size={13} muted>Change number</T></Pressable>
+                </View>
+            </>
+        );
+    }
+
+    return (
+        <>
+            <Pressable onPress={onBack} style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 12, alignSelf: "flex-start" }}>
+                <Icon name="chevron-left:lucide" size={16} color={colors.mutedForeground} />
+                <T size={13} muted>Other ways</T>
+            </Pressable>
+            <T size={13} weight="600" style={{ marginBottom: 8 }}>The number</T>
+            <Input round value={phone} onChangeText={setPhone} keyboardType="phone-pad" textContentType="telephoneNumber" autoComplete="tel" placeholder="0801 234 5678" autoFocus />
+            <T size={13} weight="600" style={{ marginTop: 16, marginBottom: 8 }}>The name customers see</T>
+            <Input round value={name} onChangeText={setName} placeholder="Your business name" />
+            <T size={12} leading={18} muted style={{ marginTop: 8 }}>A SIM in a phone near you, so you get the code. If it&apos;s on WhatsApp now, we&apos;ll show you how to move it.</T>
+            <ErrorLine error={error} />
+            <Primary title="Text me the code" busy={busy} disabled={phone.replace(/\D/g, "").length < 8 || name.trim().length < 3} onPress={() => void send("SMS")} />
+            <Pressable disabled={busy || phone.replace(/\D/g, "").length < 8} onPress={() => void send("VOICE")} style={{ marginTop: 16 }}><T size={13} muted center>Call me with the code instead</T></Pressable>
+        </>
+    );
+}
+
+export function ToggleRow({ title, detail, on, onPress }: { title: string; detail: string; on: boolean; onPress: () => void }) {
     const colors = useColors();
     return (
         <Pressable onPress={onPress} accessibilityRole="switch" accessibilityState={{ checked: on }} style={{ flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 16, backgroundColor: colors.muted, paddingHorizontal: 16, paddingVertical: 14 }}>
@@ -761,11 +914,11 @@ export function NewBusinessTask() {
     );
 }
 
-/** Not in Studio yet. */
+/** Not in Studiowave yet. */
 export function LaterTask({ onDone }: { onDone: () => void }) {
     return (
         <>
-            <T leading={24} muted>Not in Studio yet. Coming soon.</T>
+            <T leading={24} muted>Not in Studiowave yet. Coming soon.</T>
             <Primary title="OK" onPress={onDone} />
         </>
     );

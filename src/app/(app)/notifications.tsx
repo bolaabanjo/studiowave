@@ -35,7 +35,7 @@ export default function Notifications() {
                         <View style={{ flex: 1, minWidth: 0 }}>
                             <T weight="600">Never miss a customer</T>
                             {push.state === "denied" ? (
-                                <T size={13} leading={20} muted style={{ marginTop: 4 }}>Notifications are blocked for Studio. Allow them in your phone&apos;s Settings to hear when someone needs you.</T>
+                                <T size={13} leading={20} muted style={{ marginTop: 4 }}>Notifications are blocked for Studiowave. Allow them in your phone&apos;s Settings to hear when someone needs you.</T>
                             ) : (
                                 <>
                                     <T size={13} leading={20} muted style={{ marginTop: 4 }}>Get a notification when a customer needs you, books or pays.</T>

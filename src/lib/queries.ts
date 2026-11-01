@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useApi } from "@/lib/api";
 import { useWorkspace } from "@/lib/workspace";
-import type { ConversationPayload, InboxConversation, MoneyPeriod, MoneyWithPayments, Sales, StudioAssistantRow, StudioEventSummary, StudioGuest, StudioOverview } from "@/lib/types";
+import type { Appointment, ClientCard, ClientNote, ConversationPayload, InboxConversation, MoneyPeriod, MoneyWithPayments, Sales, ScheduleSettings, ScheduleView, StudioAssistantRow, StudioEventSummary, StudioGuest, StudioOverview } from "@/lib/types";
 
 // Studio's data, through the same routes and refresh rhythm as the web app.
 
@@ -72,7 +72,7 @@ export function useSalesAction() {
     const projectId = useProjectId();
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: (input: { kind: "order" | "booking"; id: string; action: "paid" | "done" | "cancelled" }) =>
+        mutationFn: (input: { kind: "order" | "booking"; id: string; action: "paid" | "done" | "cancelled" | "no_show" }) =>
             api<Sales>("/api/studio/sales", { method: "POST", body: { project_id: projectId, ...input } }),
         onSuccess: (data) => {
             queryClient.setQueryData(["sales", projectId], data);
@@ -211,5 +211,83 @@ export function useSaveEmployee(agentId: string) {
             void queryClient.invalidateQueries({ queryKey: ["assistants", projectId] });
             void queryClient.invalidateQueries({ queryKey: ["overview", projectId] });
         },
+    });
+}
+
+/** The appointment book from a day (YYYY-MM-DD, today by default) for a number of days (cencori app/api/studio/schedule). */
+export function useSchedule(from: string | null, days = 7) {
+    const api = useApi();
+    const projectId = useProjectId();
+    return useQuery({
+        queryKey: ["schedule", projectId, from, days],
+        queryFn: () => api<ScheduleView>(`/api/studio/schedule?project_id=${projectId}&days=${days}${from ? `&from=${from}` : ""}`, { fallback: "Couldn't load your schedule." }),
+        refetchInterval: 30_000,
+    });
+}
+
+function useRefreshSchedule() {
+    const projectId = useProjectId();
+    const queryClient = useQueryClient();
+    return () => {
+        for (const key of ["schedule", "sales", "overview", "client"]) void queryClient.invalidateQueries({ queryKey: [key, projectId] });
+    };
+}
+
+/** Save the services, hours, chairs, deposit and reminders: the employee books with them from the next message. */
+export function useSaveSchedule() {
+    const api = useApi();
+    const projectId = useProjectId();
+    const refresh = useRefreshSchedule();
+    return useMutation({
+        mutationFn: (settings: ScheduleSettings) => api<ScheduleView>("/api/studio/schedule", { method: "PUT", body: { project_id: projectId, settings }, fallback: "Couldn't save your schedule." }),
+        onSuccess: refresh,
+    });
+}
+
+/** Book someone in yourself: start is the business's local time, "2026-11-03T14:00". */
+export function useBookAppointment() {
+    const api = useApi();
+    const projectId = useProjectId();
+    const refresh = useRefreshSchedule();
+    return useMutation({
+        mutationFn: (input: { service: string; start: string; name: string; phone?: string; note?: string; conversation_id?: string }) =>
+            api<{ appointment: Appointment }>("/api/studio/schedule/appointments", { method: "POST", body: { project_id: projectId, ...input }, fallback: "Couldn't book that." }),
+        onSuccess: refresh,
+    });
+}
+
+/** Move an appointment, cancel it, or mark it done or a no-show; moves and cancellations are passed on to the customer. */
+export function useAppointmentAction() {
+    const api = useApi();
+    const projectId = useProjectId();
+    const refresh = useRefreshSchedule();
+    return useMutation({
+        mutationFn: (input: { id: string; action: "move" | "cancelled" | "done" | "no_show"; start?: string }) =>
+            api<{ appointment: Appointment; told: "sent" | "template" | "unreachable" | null }>("/api/studio/schedule/appointments", { method: "PATCH", body: { project_id: projectId, ...input }, fallback: "Couldn't change that." }),
+        onSuccess: refresh,
+    });
+}
+
+/** A client's card by phone number; nothing (404) for someone with no history yet. */
+export function useClient(phone: string | null) {
+    const api = useApi();
+    const projectId = useProjectId();
+    return useQuery({
+        queryKey: ["client", projectId, phone],
+        enabled: !!phone,
+        queryFn: () => api<{ client: ClientCard }>(`/api/studio/clients?project_id=${projectId}&phone=${encodeURIComponent(phone ?? "")}`, { fallback: "Couldn't load this client." }),
+        retry: false,
+    });
+}
+
+export function useClientNote(phone: string) {
+    const api = useApi();
+    const projectId = useProjectId();
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (input: { add: string } | { remove: string }) => "add" in input
+            ? api<{ note: ClientNote }>("/api/studio/clients", { method: "POST", body: { project_id: projectId, phone, note: input.add }, fallback: "Couldn't save the note." })
+            : api("/api/studio/clients", { method: "DELETE", body: { project_id: projectId, phone, note_id: input.remove }, fallback: "Couldn't remove the note." }),
+        onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["client", projectId, phone] }),
     });
 }

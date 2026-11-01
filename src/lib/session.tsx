@@ -51,7 +51,7 @@ async function authCall(path: string, body: unknown): Promise<{ token: string | 
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify(body),
     }).catch(() => null);
-    if (!response) throw new Error("Couldn't reach Studio. Check your connection and try again.");
+    if (!response) throw new Error("Couldn't reach Studiowave. Check your connection and try again.");
     const json = (await response.json().catch(() => null)) as { token?: string; message?: string; code?: string } | null;
     if (!response.ok) throw new AuthError(signInError(json?.code, json?.message), json?.code);
     // The bearer plugin sends the session token in this header; sign-in also returns it in the body.
@@ -91,7 +91,7 @@ async function providerSignIn(provider: "google" | "github"): Promise<string | n
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({ code: params.get("code"), verifier }),
     }).catch(() => null);
-    if (!response) throw new Error("Couldn't reach Studio. Check your connection and try again.");
+    if (!response) throw new Error("Couldn't reach Studiowave. Check your connection and try again.");
     const json = (await response.json().catch(() => null)) as { token?: string; error?: string } | null;
     if (!response.ok || !json?.token) throw new Error(json?.error ?? "Couldn't sign in. Try again.");
     return json.token;

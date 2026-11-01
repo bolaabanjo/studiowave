@@ -247,7 +247,7 @@ function CheckInSheet({ open, onClose, eventId, onCheckedIn }: { open: boolean; 
             ) : (
                 <Button title="Scan tickets" onPress={() => void startScanning()} style={{ marginTop: 12 }} />
             )}
-            {permission && !permission.granted && !permission.canAskAgain ? <T size={13} muted style={{ marginTop: 8 }}>Allow Studio to use the camera in your phone&apos;s Settings to scan tickets.</T> : null}
+            {permission && !permission.granted && !permission.canAskAgain ? <T size={13} muted style={{ marginTop: 8 }}>Allow Studiowave to use the camera in your phone&apos;s Settings to scan tickets.</T> : null}
             <View style={{ marginTop: 12, flexDirection: "row", gap: 8 }}>
                 <TextInput value={code} onChangeText={(value) => setCode(value.toUpperCase())} onSubmitEditing={() => void submit(code)} autoCapitalize="characters" autoCorrect={false} placeholder="Ticket code" placeholderTextColor={colors.mutedForeground} style={{ flex: 1, height: 48, borderRadius: 999, backgroundColor: colors.muted, paddingHorizontal: 20, fontFamily: "Menlo", fontSize: 16, letterSpacing: 2, color: colors.foreground }} />
                 <Pressable disabled={busy || !code.trim()} onPress={() => void submit(code)} style={{ height: 48, flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 999, borderWidth: 1, borderColor: alpha(colors.border, 0.6), paddingHorizontal: 20, opacity: busy || !code.trim() ? 0.5 : 1 }}>

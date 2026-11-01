@@ -21,6 +21,8 @@ function orderStatus(order: SalesOrder): { label: string; tone: TagTone } {
 function bookingStatus(booking: SalesBooking): { label: string; tone: TagTone } {
     if (booking.status === "done") return { label: "Came", tone: "off" };
     if (booking.status === "cancelled") return { label: "Cancelled", tone: "off" };
+    if (booking.status === "no_show") return { label: "Didn't come", tone: "off" };
+    if (booking.status === "held") return { label: "Waiting for deposit", tone: "wait" };
     const start = booking.start ? new Date(booking.start) : null;
     if (start && !Number.isNaN(start.getTime()) && start.getTime() < Date.now()) return { label: "Did they come?", tone: "wait" };
     return { label: "Booked", tone: "good" };
@@ -69,6 +71,7 @@ export default function Sales() {
                         { id: "events", label: "Events" },
                     ]} />
                     {view === "events" ? <Button height={44} title="New event" onPress={() => tasks.open("event")} style={{ marginTop: 12 }} /> : null}
+                    {view === "bookings" ? <Button height={44} title="Open your schedule" icon={<Icon name="calendar:linear" size={18} color={colors.background} />} onPress={() => router.push("/schedule")} style={{ marginTop: 12 }} /> : null}
                 </>
             }
         >
@@ -125,7 +128,7 @@ export default function Sales() {
                     </>
                 )
             ) : bookings.length === 0 ? (
-                <EmptyCard icon="calendar" title="No bookings yet" description="When your employee books a table or an appointment, it shows up here." />
+                <EmptyCard icon="calendar" title="No bookings yet" description="When your employee books a table or an appointment, it shows up here. Set up your schedule so it can book appointments itself." />
             ) : (
                 <View style={{ marginHorizontal: -16, marginTop: 12 }}>
                     {bookings.map((booking) => {

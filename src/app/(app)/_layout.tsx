@@ -46,6 +46,9 @@ export default function AppLayout() {
                     <Stack.Screen name="assistant/[id]" />
                     <Stack.Screen name="copilot" />
                     <Stack.Screen name="event/[id]" />
+                    <Stack.Screen name="schedule/index" />
+                    <Stack.Screen name="schedule/settings" />
+                    <Stack.Screen name="client/[phone]" options={sheet} />
                     <Stack.Screen name="setup" options={{ presentation: "fullScreenModal" }} />
                     <Stack.Screen name="profile" options={sheet} />
                     <Stack.Screen name="notifications" options={sheet} />

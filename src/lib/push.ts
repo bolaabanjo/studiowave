@@ -31,6 +31,7 @@ export function screenFor(url: unknown): string {
     if (conversation) return `/conversation/${conversation[1]}`;
     if (url.startsWith("/inbox")) return "/inbox";
     if (url.startsWith("/sales")) return "/sales";
+    if (url.startsWith("/schedule")) return "/schedule";
     if (url.startsWith("/money")) return "/money";
     return "/";
 }
@@ -43,7 +44,7 @@ function pushPossible(): boolean {
 /** Ask (if asked to), then send this phone's token to Studio. Whether it's on. */
 async function register(api: ReturnType<typeof useApi>, studioProjectId: string, ask: boolean): Promise<boolean> {
     if (Platform.OS === "android") {
-        await Notifications.setNotificationChannelAsync("default", { name: "Studio", importance: AndroidImportance.HIGH });
+        await Notifications.setNotificationChannelAsync("default", { name: "Studiowave", importance: AndroidImportance.HIGH });
     }
     const current = await Notifications.getPermissionsAsync();
     const granted = current.granted || (ask && current.canAskAgain && (await Notifications.requestPermissionsAsync()).granted);

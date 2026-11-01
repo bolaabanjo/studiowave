@@ -21,7 +21,7 @@ const TITLES: Record<StudioTask, string> = {
     plans: "Choose a plan",
     business: "",
     newbusiness: "New business",
-    later: "Coming to Studio soon",
+    later: "Coming to Studiowave soon",
 };
 
 /** Sheets whose main button sits at the bottom. */

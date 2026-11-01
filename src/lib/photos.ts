@@ -10,7 +10,7 @@ export async function pickPhotos({ max = 1, maxSide = 1600, quality = 0.85, came
     const options: ImagePicker.ImagePickerOptions = { mediaTypes: ["images"], quality: 1, allowsMultipleSelection: max > 1, selectionLimit: max };
     if (camera) {
         const permission = await ImagePicker.requestCameraPermissionsAsync();
-        if (!permission.granted) throw new Error("Allow Studio to use the camera in your phone's Settings.");
+        if (!permission.granted) throw new Error("Allow Studiowave to use the camera in your phone's Settings.");
     }
     const picked = camera ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
     if (picked.canceled || !picked.assets.length) return null;

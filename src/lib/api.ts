@@ -4,7 +4,8 @@ import { API_URL } from "@/lib/config";
 import { useSession } from "@/lib/session";
 
 export class ApiError extends Error {
-    constructor(message: string, readonly status: number) {
+    /** reason: the server's word for what went wrong, when it gives one (e.g. "on_whatsapp"). */
+    constructor(message: string, readonly status: number, readonly reason?: string) {
         super(message);
     }
 }
@@ -35,14 +36,14 @@ export function useApi() {
         }).catch(() => null);
         if (!response) {
             clearTimeout(timer);
-            throw new ApiError(abort.signal.aborted ? "Studio is taking too long. Check your connection and try again." : "Couldn't reach Studio. Check your connection and try again.", 0);
+            throw new ApiError(abort.signal.aborted ? "Studiowave is taking too long. Check your connection and try again." : "Couldn't reach Studiowave. Check your connection and try again.", 0);
         }
         const json = await response.json().catch(() => null).finally(() => clearTimeout(timer));
         if (response.status === 401) {
             void signOut();
             throw new ApiError("Sign in again.", 401);
         }
-        if (!response.ok) throw new ApiError((json as { error?: string } | null)?.error ?? init?.fallback ?? "That didn't work. Try again.", response.status);
+        if (!response.ok) throw new ApiError((json as { error?: string } | null)?.error ?? init?.fallback ?? "That didn't work. Try again.", response.status, (json as { reason?: string } | null)?.reason);
         return json as T;
     }, [token, signOut]);
 }

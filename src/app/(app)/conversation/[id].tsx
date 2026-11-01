@@ -68,6 +68,7 @@ export default function Conversation() {
                             <T size={16} weight="600" lines={1}>{conversationTitle(conversation)}</T>
                             <T size={12} muted lines={1}>{CHANNEL_LABEL[conversation.channel]}{conversation.number && conversation.number !== conversation.name ? ` · ${conversation.number}` : ""}</T>
                         </View>
+                        {conversation.channel === "whatsapp" && conversation.number ? <IconButton name="user-rounded" label="Client card" color={colors.mutedForeground} onPress={() => router.push(`/client/${encodeURIComponent(conversation.number!)}`)} /> : null}
                         <IconButton name="mail-warning:lucide" label="Mark as unread" color={colors.mutedForeground} disabled={markRead.isPending} onPress={keepUnread} />
                     </>
                 ) : (
