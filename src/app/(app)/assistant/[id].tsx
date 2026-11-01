@@ -1,18 +1,18 @@
 import { useState, type ReactNode } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { Linking, Pressable, ScrollView, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { goBack } from "@/lib/navigation";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useApi } from "@/lib/api";
 import { useWorkspace } from "@/lib/workspace";
 import { useAssistants, useEmployee, useOverview } from "@/lib/queries";
 import { assistantStatus } from "@/components/assistant-status";
 import { PersonalitySection, RenameSheet } from "@/components/personality";
 import { useCopilot } from "@/lib/copilot";
-import { Icon } from "@/ui/icons";
+import { Icon, WhatsAppMark } from "@/ui/icons";
 import { AgentOrb, BottomSheet, Button, ErrorText, IconButton, LoadError, Skeleton, Spinner, T, Tag } from "@/ui/kit";
-import { useColors } from "@/ui/theme";
+import { palette, useColors } from "@/ui/theme";
 
 /**
  * An employee's profile: who they are, their name and personality, both
@@ -64,6 +64,7 @@ export default function AssistantDetail() {
 
                         {/* Anything else is a conversation with them, on the AI tab. */}
                         <Button kind="outline" title={`Talk to ${profile.data?.name ?? assistant.name}`} onPress={() => router.navigate({ pathname: "/copilot", params: isMain ? {} : { agent: id } })} style={{ marginTop: 24 }} />
+                        <WhatsAppWithMe agentId={id} name={profile.data?.name ?? assistant.name} />
                         <Pressable onPress={() => setDeleting(true)} accessibilityRole="button" style={({ pressed }) => ({ marginTop: 10, height: 48, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: "#dc2626", opacity: pressed ? 0.85 : 1 })}>
                             <T weight="600" color="#ffffff">Delete {profile.data?.name ?? assistant.name}</T>
                         </Pressable>
@@ -132,6 +133,60 @@ function DeleteSheet({ agentId, name, open, onClose }: { agentId: string; name: 
             </Pressable>
             <Button kind="outline" title="Keep them" disabled={busy} onPress={onClose} style={{ marginTop: 8 }} />
         </BottomSheet>
+    );
+}
+
+/**
+ * Text this employee on WhatsApp (cencori lib/studio/owner-whatsapp.ts): one
+ * tap opens WhatsApp to their number with "Link 4831" typed in, and sending it
+ * links your number. Once linked, it says so and can be stopped.
+ */
+function WhatsAppWithMe({ agentId, name }: { agentId: string; name: string }) {
+    const colors = useColors();
+    const api = useApi();
+    const queryClient = useQueryClient();
+    const { workspace } = useWorkspace();
+    const key = ["owner-whatsapp", workspace.project.id, agentId];
+    // After the tap, check every few seconds until the code arrives and they're linked.
+    const [waiting, setWaiting] = useState(false);
+    const status = useQuery({ queryKey: key, queryFn: () => api<{ linked: boolean; phone: string | null }>(`/api/studio/owner-whatsapp?project_id=${workspace.project.id}&agent_id=${agentId}`), refetchInterval: (query) => (waiting && !query.state.data?.linked ? 4_000 : false) });
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const link = async () => {
+        setBusy(true);
+        setError(null);
+        try {
+            const started = await api<{ link: string }>("/api/studio/owner-whatsapp", { method: "POST", body: { project_id: workspace.project.id, agent_id: agentId }, fallback: "Couldn't set that up." });
+            setWaiting(true);
+            await Linking.openURL(started.link);
+        } catch (cause) {
+            setError(cause instanceof Error ? cause.message : "Couldn't set that up.");
+        } finally {
+            setBusy(false);
+        }
+    };
+    const stop = async () => {
+        setBusy(true);
+        try {
+            await api("/api/studio/owner-whatsapp", { method: "DELETE", body: { project_id: workspace.project.id, agent_id: agentId } });
+            await queryClient.invalidateQueries({ queryKey: key });
+        } finally {
+            setBusy(false);
+        }
+    };
+    const linked = status.data?.linked;
+    return (
+        <View style={{ marginTop: 10 }}>
+            <Pressable onPress={() => void (linked ? undefined : link())} disabled={busy || linked} accessibilityRole="button"
+                style={({ pressed }) => ({ height: 48, borderRadius: 999, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, backgroundColor: colors.muted, opacity: busy ? 0.6 : pressed ? 0.85 : 1 })}>
+                {busy ? <Spinner /> : <WhatsAppMark size={18} color={palette.whatsapp} />}
+                <T weight="600">{linked ? `On WhatsApp with you${status.data?.phone ? ` (${status.data.phone})` : ""}` : `Text ${name} on WhatsApp`}</T>
+            </Pressable>
+            {linked ? (
+                <Pressable onPress={() => void stop()} disabled={busy} style={{ marginTop: 6, alignSelf: "center", paddingVertical: 4 }}><T size={13} muted>Stop texting on WhatsApp</T></Pressable>
+            ) : null}
+            {error ? <ErrorText style={{ marginTop: 6 }}>{error}</ErrorText> : null}
+        </View>
     );
 }
 
