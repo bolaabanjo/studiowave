@@ -37,9 +37,10 @@ export default function TabsLayout() {
                 <NativeTabs.Trigger.Label>Money</NativeTabs.Trigger.Label>
                 <NativeTabs.Trigger.Icon src={require("../../../../assets/tabs/wallet.png")} renderingMode="template" />
             </NativeTabs.Trigger>
-            <NativeTabs.Trigger name="assistant" contentStyle={behind}>
+            {/* On its own, apart from the four: iOS 26 gives the search tab its own circle, iOS 27 a prominent tab. */}
+            <NativeTabs.Trigger name="assistant" contentStyle={behind} role="search" prominent>
                 <NativeTabs.Trigger.Label>AI</NativeTabs.Trigger.Label>
-                <NativeTabs.Trigger.Icon src={require("../../../../assets/tabs/stars-minimalistic.png")} renderingMode="template" />
+                <NativeTabs.Trigger.Icon src={require("../../../../assets/tabs/user-rounded.png")} renderingMode="template" />
             </NativeTabs.Trigger>
         </NativeTabs>
     );
